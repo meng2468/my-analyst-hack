@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import logging
 import openai
 import json
+import agent
 
 # Load environment variables
 load_dotenv()
@@ -81,6 +82,9 @@ async def health_check():
         "openai_configured": bool(OPENAI_API_KEY)
     }
 
+agent.start_mcp_sse()
+agent.deno_warmup()
+
 # Chat endpoint - process user message and return both text and audio
 @app.post("/chat")
 async def chat_with_ai(request: UserMessageRequest):
@@ -104,17 +108,7 @@ async def chat_with_ai(request: UserMessageRequest):
         
         # Get AI response from OpenAI
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful voice assistant. Keep responses concise and conversational."},
-                {"role": "user", "content": request.message}
-            ],
-            max_tokens=150,
-            temperature=0.7
-        )
-        
-        ai_response_text = response.choices[0].message.content.strip()
+        ai_response_text = await agent.perform_analysis("How many entries are there?")
         print(ai_response_text)
         
         # Generate audio for the response
@@ -166,10 +160,11 @@ async def text_to_speech_stream(request: TextToSpeechRequest):
     
     try:
         logger.info(f"Processing TTS request: {request.text[:50]}...")
+        ai_response_text = await mcp_proc.perform_analysis("How many entries are there?")
         
         # Generate audio using ElevenLabs
         audio_stream = generate(
-            text=request.text,
+            text=ai_response_text,
             voice=request.voice_id,
             model=request.model_id,
             stream=True
