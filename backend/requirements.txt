@@ -4,3 +4,4 @@ uvicorn
 pipecat-ai[daily,elevenlabs,openai,silero,google,webrtc]
 pandas
 aiortc
+uvicorn
