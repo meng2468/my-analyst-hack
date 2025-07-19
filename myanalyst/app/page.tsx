@@ -2,6 +2,7 @@
 import { FileUpload } from "@/app/_components/file-upload";
 import { useEffect, useState } from "react";
 import UploadView from "./_views/UploadView";
+import ConversationView from "./_views/ConversationView";
 
 /*
 0: Upload dataset
@@ -27,7 +28,7 @@ export default function Home() {
           <UploadView sessionId={sessionId} setSessionFile={setFile} />
         )}
         {currentStep === 1 && (
-          <div className="text-sm text-gray-500">Conversation Interaction</div>
+          <ConversationView sessionId={sessionId}/>
         )}
         {currentStep === 2 && (
           <div className="text-sm text-gray-500">Summary</div>

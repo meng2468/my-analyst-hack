@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
-export default function Page() {
+export default function ConversationView({ sessionId }: { sessionId: string }) {
   const [status, setStatus] = useState('Disconnected');
   const [connected, setConnected] = useState(false);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -66,7 +66,7 @@ export default function Page() {
     const requestBody = {
       sdp: offer.sdp,
       type: offer.type,
-      session_id: "123",
+      session_id: sessionId,
       ...(pcIdRef.current && { pc_id: pcIdRef.current })
     };
 

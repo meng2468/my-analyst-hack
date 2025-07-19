@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { LoadingSpinnerWithText } from "@/components/ui/loading-spinner";
 import { useState, useRef } from "react";
+import { getBackendUrl } from "@/lib/config";
 
 export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, setSessionFile: (file: File) => void }) {
   const [file, setFile] = useState<File | null>(null);
@@ -59,7 +60,9 @@ export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, s
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/file-upload', {
+      // Use the FastAPI backend endpoint
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/upload-csv?session_id=${sessionId}`, {
         method: 'POST',
         body: formData,
       });
@@ -71,7 +74,7 @@ export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, s
         setSessionFile(file);
       } else {
         setUploadStatus('error');
-        setErrorMessage(result.error || 'Upload failed');
+        setErrorMessage(result.detail || result.error || 'Upload failed');
       }
     } catch (error) {
       setUploadStatus('error');
