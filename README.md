@@ -1,20 +1,22 @@
-# Voice Agent with ElevenLabs Integration
+# Voice Agent with OpenAI & ElevenLabs Integration
 
-A full-stack voice agent application that combines real-time speech recognition with high-quality text-to-speech using ElevenLabs API. The application features a modern React frontend with Web Speech API and a FastAPI backend for premium voice synthesis.
+A full-stack voice agent application that combines real-time speech recognition with AI-powered responses using OpenAI and high-quality text-to-speech using ElevenLabs API. The application features a modern React frontend with Web Speech API and a FastAPI backend for intelligent conversation and premium voice synthesis.
 
 ## 🎯 Features
 
 ### Frontend (Next.js + React)
 - 🎤 **Real-time Speech Recognition** - Uses Web Speech API for instant transcription
+- 🤖 **AI-Powered Responses** - OpenAI integration for intelligent conversation
 - 🎵 **High-Quality TTS** - ElevenLabs integration for premium voice synthesis
-- 🔄 **Fallback System** - Automatic fallback to browser TTS if backend unavailable
+- 🔄 **Fallback System** - Automatic fallback to simple responses if backend unavailable
 - 🎨 **Modern UI** - Beautiful, responsive interface with real-time feedback
 - 🎛️ **Voice Selection** - Choose from multiple ElevenLabs voices
 - 💬 **Conversation History** - Chat-like interface with timestamps
 - 📱 **Mobile Responsive** - Works on desktop and mobile devices
 
 ### Backend (FastAPI)
-- 🚀 **Streaming Audio** - Real-time audio streaming from text
+- 🚀 **AI Chat Processing** - OpenAI GPT-3.5-turbo for intelligent responses
+- 🎵 **Streaming Audio** - Real-time audio streaming from text
 - 🎵 **Multiple Voices** - Access to all ElevenLabs voices
 - 📊 **Usage Monitoring** - Track API usage and limits
 - 🔧 **RESTful API** - Clean, documented endpoints
@@ -28,19 +30,27 @@ A full-stack voice agent application that combines real-time speech recognition 
 │   Frontend      │ ◄──────────────────► │    Backend      │
 │   (Next.js)     │                      │   (FastAPI)     │
 │                 │                      │                 │
-│ • Speech Rec.   │                      │ • ElevenLabs    │
-│ • Voice UI      │                      │ • TTS Streaming │
-│ • Fallback TTS  │                      │ • Voice Mgmt    │
+│ • Speech Rec.   │                      │ • OpenAI Chat   │
+│ • Voice UI      │                      │ • ElevenLabs    │
+│ • Fallback TTS  │                      │ • TTS Streaming │
 └─────────────────┘                      └─────────────────┘
          │                                        │
          │                                        │
          ▼                                        ▼
 ┌─────────────────┐                      ┌─────────────────┐
-│  Web Speech API │                      │  ElevenLabs API │
+│  Web Speech API │                      │  OpenAI API     │
 │                 │                      │                 │
-│ • Speech Rec.   │                      │ • Text-to-Speech│
-│ • Browser TTS   │                      │ • Voice Models  │
+│ • Speech Rec.   │                      │ • GPT-3.5-turbo │
+│ • Browser TTS   │                      │ • Chat Complet. │
 └─────────────────┘                      └─────────────────┘
+                                                │
+                                                ▼
+                                       ┌─────────────────┐
+                                       │  ElevenLabs API │
+                                       │                 │
+                                       │ • Text-to-Speech│
+                                       │ • Voice Models  │
+                                       └─────────────────┘
 ```
 
 ## 🚀 Quick Start
@@ -48,25 +58,34 @@ A full-stack voice agent application that combines real-time speech recognition 
 ### Prerequisites
 - **Python 3.8+** with pip
 - **Node.js 16+** with npm
+- **OpenAI API Key** (get one at [platform.openai.com](https://platform.openai.com/api-keys))
 - **ElevenLabs API Key** (free account at [elevenlabs.io](https://elevenlabs.io))
 
 ### 1. Clone and Setup
 
 ```bash
 git clone <repository-url>
-cd thore-hackathon
+cd my-analyst-hack
 ```
 
-### 2. Configure ElevenLabs API
+### 2. Configure API Keys
 
 ```bash
 cd backend
 cp env.example .env
 ```
 
-Edit `.env` and add your ElevenLabs API key:
+Edit `.env` and add your API keys:
 ```env
-ELEVENLABS_API_KEY=your_actual_api_key_here
+# OpenAI API Configuration
+OPENAI_API_KEY=your_openai_api_key_here
+
+# ElevenLabs API Configuration
+ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=8000
 ```
 
 ### 3. Start the Application
@@ -104,23 +123,23 @@ npm run dev
 
 1. **Start Listening**: Click the "Start Listening" button
 2. **Speak**: Say something clearly into your microphone
-3. **Get Response**: The agent will transcribe your speech and respond with high-quality audio
+3. **Get AI Response**: The agent will transcribe your speech, process it with OpenAI, and respond with high-quality audio
 4. **Choose Voice**: Select different voices from the dropdown menu
 5. **View History**: See your conversation history in the chat interface
 
-### Voice Commands
-- "Hello" or "Hi" - Get a greeting
-- "What time is it?" - Get current time
-- "What's the date?" - Get current date
-- "Tell me a joke" - Hear a joke
-- "Thank you" - Get a response
-- "Goodbye" - End conversation
+### Example Conversations
+- Ask questions: "What's the weather like?", "Tell me a joke", "How do I make coffee?"
+- Get information: "What time is it?", "What's today's date?", "Explain quantum physics"
+- Have a chat: "Hello", "How are you?", "Tell me about yourself"
 
 ## 🔧 API Endpoints
 
 ### Health & Status
 - `GET /` - Root endpoint
-- `GET /health` - Health check with ElevenLabs status
+- `GET /health` - Health check with OpenAI and ElevenLabs status
+
+### AI Chat
+- `POST /chat` - Process user message with OpenAI and return text + audio
 
 ### Text-to-Speech
 - `POST /tts/stream` - Stream audio response
@@ -141,14 +160,14 @@ python test_api.py
 ### Test the Frontend
 1. Open http://localhost:3000
 2. Allow microphone permissions
-3. Try the voice commands listed above
+3. Try asking questions or having a conversation
 
 ## 📁 Project Structure
 
 ```
-thore-hackathon/
+my-analyst-hack/
 ├── backend/                 # FastAPI backend
-│   ├── main.py             # Main FastAPI application
+│   ├── main.py             # Main FastAPI application with OpenAI integration
 │   ├── requirements.txt    # Python dependencies
 │   ├── test_api.py         # API testing script
 │   ├── env.example         # Environment variables template
@@ -156,7 +175,7 @@ thore-hackathon/
 ├── telli-hack/             # Next.js frontend
 │   ├── app/
 │   │   ├── _components/
-│   │   │   └── VoiceUI.tsx # Main voice interface
+│   │   │   └── VoiceUI.tsx # Main voice interface with OpenAI chat
 │   │   ├── types/
 │   │   │   └── speech.d.ts # Web Speech API types
 │   │   ├── page.tsx        # Main page
@@ -173,9 +192,24 @@ thore-hackathon/
 
 **Backend (.env):**
 ```env
-ELEVENLABS_API_KEY=your_api_key_here
+# OpenAI API Configuration
+OPENAI_API_KEY=your_openai_api_key_here
+
+# ElevenLabs API Configuration
+ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+
+# Server Configuration
 HOST=0.0.0.0
 PORT=8000
+```
+
+### OpenAI Configuration
+
+The backend uses GPT-3.5-turbo with the following settings:
+```python
+model="gpt-3.5-turbo"
+max_tokens=150
+temperature=0.7
 ```
 
 ### Voice Settings
@@ -202,19 +236,23 @@ You can customize voice parameters:
    - Use Chrome, Firefox, or Safari
    - Ensure HTTPS or localhost
 
-2. **"ElevenLabs API key not configured"**
+2. **"OpenAI API key not configured"**
+   - Check your `.env` file in the backend directory
+   - Verify your API key is valid at [platform.openai.com](https://platform.openai.com/api-keys)
+
+3. **"ElevenLabs API key not configured"**
    - Check your `.env` file in the backend directory
    - Verify your API key is valid
 
-3. **"CORS errors"**
+4. **"CORS errors"**
    - Backend is configured for `localhost:3000`
    - Check that both servers are running
 
-4. **"Audio not playing"**
+5. **"Audio not playing"**
    - Check browser audio permissions
    - Try refreshing the page
 
-5. **"Backend connection failed"**
+6. **"Backend connection failed"**
    - Ensure backend is running on port 8000
    - Check firewall settings
 
@@ -259,6 +297,7 @@ This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
+- [OpenAI](https://openai.com) for AI-powered conversation capabilities
 - [ElevenLabs](https://elevenlabs.io) for high-quality text-to-speech
 - [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) for speech recognition
 - [FastAPI](https://fastapi.tiangolo.com/) for the backend framework

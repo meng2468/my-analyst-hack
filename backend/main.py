@@ -52,8 +52,8 @@ else:
 # Pydantic models
 class TextToSpeechRequest(BaseModel):
     text: str
-    voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Default voice (Rachel)
-    model_id: str = "eleven_monolingual_v1"
+    voice_id: str = "FV5VfeCbFVx94BzoAPwQ"  # Default voice (Rachel)
+    model_id: str = "eleven_multilingual_v2"
 
 class VoiceInfo(BaseModel):
     voice_id: str
@@ -62,8 +62,8 @@ class VoiceInfo(BaseModel):
 
 class UserMessageRequest(BaseModel):
     message: str
-    voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Default voice (Rachel)
-    model_id: str = "eleven_monolingual_v1"
+    voice_id: str = "FV5VfeCbFVx94BzoAPwQ"  # Default voice (Rachel)
+    model_id: str = "eleven_multilingual_v2"
 
 class ChatResponse(BaseModel):
     text: str
