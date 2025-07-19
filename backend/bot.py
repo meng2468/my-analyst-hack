@@ -39,11 +39,20 @@ async def execute_dataframe_code(params: FunctionCallParams, code: str):
 
     # Load session-specific dataframe
     try:
-        df = pd.read_csv(f"{session_id}.csv")
+        # Try to load from data folder first (for uploaded files)
+        df = pd.read_csv(f"data/{session_id}.csv")
+        print(f"Loaded dataset from data/{session_id}.csv", flush=True)
     except Exception as e:
-        print(f"no data found for session id {session_id}. error {e}", flush=True)
-        df = pd.read_csv("airline.csv")
-        #await params.result_callback({"result": f"no data found for session id {session_id}. error {e}"})
+        print(f"no data found for session id {session_id} in data folder. error {e}", flush=True)
+        try:
+            # Fallback to current directory
+            df = pd.read_csv(f"{session_id}.csv")
+            print(f"Loaded dataset from {session_id}.csv", flush=True)
+        except Exception as e2:
+            print(f"no data found for session id {session_id} in current directory. error {e2}", flush=True)
+            # Final fallback to default dataset
+            df = pd.read_csv("airline.csv")
+            print("Using default airline dataset", flush=True)
 
     safe_locals = {"df": df, "pd": pd}
     output = io.StringIO()
@@ -71,15 +80,11 @@ tools = ToolsSchema(standard_tools=[execute_dataframe_code])
 # --- SYSTEM PROMPT: tell LLM how & when to use it ---
 SYSTEM_PROMPT = (
     "You are a helpful assistant for data analysis. "
-    "The user's airline passenger data is preloaded as the variable `df` (a pandas DataFrame). "
-    "Columns and example rows from the dataset are provided below:\n\n"
-    "satisfaction,Customer Type,Age,Type of Travel,Class,Flight Distance,Seat comfort,Departure/Arrival time convenient,Food and drink,Gate location,Inflight wifi service,Inflight entertainment,Online support,Ease of Online booking,On-board service,Leg room service,Baggage handling,Checkin service,Cleanliness,Online boarding,Departure Delay in Minutes,Arrival Delay in Minutes\n"
-    "satisfied,Loyal Customer,65,Personal Travel,Eco,265,0,0,0,2,2,4,2,3,3,0,3,5,3,2,0,0.0\n"
-    "satisfied,Loyal Customer,47,Personal Travel,Business,2464,0,0,0,3,0,2,2,3,4,4,4,2,3,2,310,305.0\n\n"
+    "The user's dataset is loaded dynamically based on their session and is available as the variable `df` (a pandas DataFrame). "
     "When the user requests analysis, statistics, summary, or inspection, call `execute_dataframe_code` "
     "with the appropriate Python code to analyze or manipulate `df`. "
-    "Always provide Python code as a string in the tool call argument named 'code'. Also describe errors when something went wrong"
-    "Your output is directly transfered text-to-speach, so make a natural, concisise and to the point summary to the user question thats easy to understand just by listening to it."
+    "Always provide Python code as a string in the tool call argument named 'code'. Also describe errors when something went wrong. "
+    "Your output is directly transferred to text-to-speech, so make a natural, concise and to the point summary to the user question that's easy to understand just by listening to it."
 )
 
 
@@ -87,7 +92,7 @@ INTRO_MESSAGE = (
     "Hello! I am your data analyst"
 )
 
-async def run_bot(webrtc_connection):
+async def run_bot(webrtc_connection, session_id=None):
     pipecat_transport = SmallWebRTCTransport(
         webrtc_connection=webrtc_connection,
         params=TransportParams(
@@ -143,10 +148,9 @@ async def run_bot(webrtc_connection):
 
     @pipecat_transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
-        session_id = getattr(client, "session_id", None)
-        if session_id is None and hasattr(client, "info"):
-            session_id = client.info.get("session_id")
-
+        print('CLIENT DETAILS', client, flush=True)
+        
+        # Use the session_id passed to run_bot function
         logger.info(f"Pipecat Client connected. Session ID: {session_id}")
 
         # Set both task and session context vars
