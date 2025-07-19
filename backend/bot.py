@@ -23,25 +23,52 @@ from pipecat.services.llm_service import FunctionCallParams
 
 load_dotenv(override=True)
 
-# --- Hardcoded DataFrame ---
-df = pd.DataFrame({
-    'name': ['Alice', 'Bob', 'Charlie'],
-    'age': [25, 30, 35],
-    'salary': [70000, 80000, 90000],
-})
+df = pd.read_csv("airline.csv")
 
-# --- Function Tool: execute_df_code ---
-async def fetch_weather_from_api(params: FunctionCallParams):
-    weather_data = {"conditions": "sunny", "temperature": "75"}
-    await params.result_callback(weather_data)
+
+async def execute_dataframe_code(params: FunctionCallParams, code: str):
+    """
+    Executes provided Python code to analyze/manipulate the globally loaded DataFrame `df`.
+    Returns the text output, or the result of the last expression if any.
+    """
+    safe_locals = {"df": df, "pd": pd}
+    output = io.StringIO()
+    try:
+        # Try to compile as an expression first (e.g., 'len(df)')
+        try:
+            compiled = compile(code, "<string>", "eval")
+            value = eval(compiled, {}, safe_locals)
+            result = str(value)
+        except SyntaxError:
+            # Not an expression, treat as a block
+            with contextlib.redirect_stdout(output):
+                exec(code, {}, safe_locals)
+            result = output.getvalue()
+            if not result:
+                result = "Code executed, but did not return or print anything."
+    except Exception as e:
+        result = f"Error during execution: {e}"
+    print("code", code, flush=True)
+    print("result", result, flush=True)
+    await params.result_callback({"result": result})
 
 # --- Register the tool directly ---
-tools = ToolsSchema(standard_tools=[fetch_weather_from_api])
+tools = ToolsSchema(standard_tools=[execute_dataframe_code])
 
 # --- SYSTEM PROMPT: tell LLM how & when to use it ---
 SYSTEM_PROMPT = (
-    "helpfull assistant"
+    "You are a helpful assistant for data analysis. "
+    "The user's airline passenger data is preloaded as the variable `df` (a pandas DataFrame). "
+    "Columns and example rows from the dataset are provided below:\n\n"
+    "satisfaction,Customer Type,Age,Type of Travel,Class,Flight Distance,Seat comfort,Departure/Arrival time convenient,Food and drink,Gate location,Inflight wifi service,Inflight entertainment,Online support,Ease of Online booking,On-board service,Leg room service,Baggage handling,Checkin service,Cleanliness,Online boarding,Departure Delay in Minutes,Arrival Delay in Minutes\n"
+    "satisfied,Loyal Customer,65,Personal Travel,Eco,265,0,0,0,2,2,4,2,3,3,0,3,5,3,2,0,0.0\n"
+    "satisfied,Loyal Customer,47,Personal Travel,Business,2464,0,0,0,3,0,2,2,3,4,4,4,2,3,2,310,305.0\n\n"
+    "When the user requests analysis, statistics, summary, or inspection, call `execute_dataframe_code` "
+    "with the appropriate Python code to analyze or manipulate `df`. "
+    "Always provide Python code as a string in the tool call argument named 'code'. Also describe errors when something went wrong"
+    "Your output is directly transfered text-to-speach, so make a natural, concisise and to the point summary to the user question thats easy to understand just by listening to it."
 )
+
 
 INTRO_MESSAGE = (
     "Hello! I am your data analyst"
@@ -63,12 +90,12 @@ async def run_bot(webrtc_connection):
         system_instruction=SYSTEM_PROMPT,
         tools=tools,
     )
-    llm.register_direct_function(fetch_weather_from_api)
+    llm.register_direct_function(execute_dataframe_code)
 
 
     tts = ElevenLabsTTSService(
         api_key=os.getenv("ELEVENLABS_API_KEY"),
-        voice_id="pNInz6obpgDQGcFmaJgB",
+        voice_id=os.getenv("ELEVENLABS_VOICE_ID"),
         model="eleven_flash_v2_5",
     )
 
@@ -78,7 +105,7 @@ async def run_bot(webrtc_connection):
         language=Language.EN,
     )
 
-    messages = [{"role": "system", "content": INTRO_MESSAGE}]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     context = OpenAILLMContext(messages, tools=tools)
     context_aggregator = llm.create_context_aggregator(context)
 
