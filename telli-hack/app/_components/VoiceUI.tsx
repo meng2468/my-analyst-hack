@@ -16,7 +16,6 @@ export default function VoiceUI() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(true);
-  const [selectedVoice, setSelectedVoice] = useState('21m00Tcm4TlvDq8ikWAM'); // Rachel
   const [availableVoices, setAvailableVoices] = useState<any[]>([]);
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
   const [messageCounter, setMessageCounter] = useState(0);
@@ -138,8 +137,6 @@ export default function VoiceUI() {
         },
         body: JSON.stringify({
           text: text,
-          voice_id: selectedVoice,
-          model_id: 'eleven_monolingual_v1'
         })
       });
 
@@ -206,8 +203,6 @@ export default function VoiceUI() {
         },
         body: JSON.stringify({
           message: command,
-          voice_id: selectedVoice,
-          model_id: 'eleven_monolingual_v1'
         })
       });
 
@@ -321,8 +316,6 @@ export default function VoiceUI() {
         },
         body: JSON.stringify({
           text: testText,
-          voice_id: selectedVoice,
-          model_id: 'eleven_monolingual_v1'
         })
       });
 
@@ -431,31 +424,6 @@ export default function VoiceUI() {
               }
             </div>
           </div>
-        </div>
-
-        {/* Voice Selection */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Voice:
-          </label>
-          <select
-            value={selectedVoice}
-            onChange={(e) => setSelectedVoice(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isLoadingVoices}
-          >
-            {isLoadingVoices ? (
-              <option>Loading voices...</option>
-            ) : availableVoices.length > 0 ? (
-              availableVoices.map((voice) => (
-                <option key={voice.voice_id} value={voice.voice_id}>
-                  {voice.name} {voice.accent && `(${voice.accent})`}
-                </option>
-              ))
-            ) : (
-              <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Default)</option>
-            )}
-          </select>
         </div>
 
         {/* Status Indicators */}
