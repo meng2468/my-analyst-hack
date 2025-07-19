@@ -160,7 +160,7 @@ async def text_to_speech_stream(request: TextToSpeechRequest):
     
     try:
         logger.info(f"Processing TTS request: {request.text[:50]}...")
-        ai_response_text = await mcp_proc.perform_analysis("How many entries are there?")
+        ai_response_text = await agent.perform_analysis("How many entries are there?")
         
         # Generate audio using ElevenLabs
         audio_stream = generate(
