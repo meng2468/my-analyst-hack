@@ -65,6 +65,7 @@ export default function Page() {
     const requestBody = {
       sdp: offer.sdp,
       type: offer.type,
+      session_id: "123",
       ...(pcIdRef.current && { pc_id: pcIdRef.current })
     };
 
