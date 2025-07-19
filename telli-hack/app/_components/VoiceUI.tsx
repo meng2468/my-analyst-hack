@@ -23,7 +23,6 @@ export default function VoiceUI() {
   const [autoListen, setAutoListen] = useState(false); // New state for auto-listen mode
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const synthesisRef = useRef<SpeechSynthesis | null>(null);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -82,9 +81,6 @@ export default function VoiceUI() {
         setIsListening(false);
         console.log('Speech recognition ended');
       };
-
-      // Initialize speech synthesis
-      synthesisRef.current = window.speechSynthesis;
     }
 
     return () => {
@@ -134,17 +130,17 @@ export default function VoiceUI() {
         recognitionRef.current.stop();
       }
       
-      // Try to use ElevenLabs backend first
+      // Use ElevenLabs backend
       const response = await fetch('http://localhost:8000/tts/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-                  body: JSON.stringify({
-            text: text,
-            voice_id: selectedVoice,
-            model_id: 'eleven_monolingual_v1'
-          })
+        body: JSON.stringify({
+          text: text,
+          voice_id: selectedVoice,
+          model_id: 'eleven_monolingual_v1'
+        })
       });
 
       if (response.ok) {
@@ -172,60 +168,33 @@ export default function VoiceUI() {
               recognitionRef.current?.start();
             }, 500);
           }
-          // Fallback to browser TTS
-          fallbackToBrowserTTS(text);
+          console.error('Error playing ElevenLabs audio');
         };
         
         await audio.play();
       } else {
-        // Fallback to browser TTS if backend fails
-        fallbackToBrowserTTS(text);
+        console.error('ElevenLabs TTS request failed:', response.status);
+        setIsSpeaking(false);
+        // Resume speech recognition after error (only in auto-listen mode)
+        if (autoListen && recognitionRef.current && !isListening) {
+          setTimeout(() => {
+            recognitionRef.current?.start();
+          }, 500);
+        }
       }
     } catch (error) {
       console.error('Error with ElevenLabs TTS:', error);
+      setIsSpeaking(false);
       // Resume speech recognition after error (only in auto-listen mode)
       if (autoListen && recognitionRef.current && !isListening) {
         setTimeout(() => {
           recognitionRef.current?.start();
         }, 500);
       }
-      // Fallback to browser TTS
-      fallbackToBrowserTTS(text);
     }
   };
 
-  const fallbackToBrowserTTS = (text: string) => {
-    if (synthesisRef.current) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        // Resume speech recognition after browser TTS ends (only in auto-listen mode)
-        if (autoListen && recognitionRef.current && !isListening) {
-          setTimeout(() => {
-            recognitionRef.current?.start();
-          }, 500);
-        }
-      };
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        // Resume speech recognition after browser TTS error (only in auto-listen mode)
-        if (autoListen && recognitionRef.current && !isListening) {
-          setTimeout(() => {
-            recognitionRef.current?.start();
-          }, 500);
-        }
-      };
-      synthesisRef.current.speak(utterance);
-    } else {
-      setIsSpeaking(false);
-      // Resume speech recognition if no TTS available (only in auto-listen mode)
-      if (autoListen && recognitionRef.current && !isListening) {
-        setTimeout(() => {
-          recognitionRef.current?.start();
-        }, 500);
-      }
-    }
-  };
+
 
   const processVoiceCommand = async (command: string) => {
     try {
@@ -340,6 +309,51 @@ export default function VoiceUI() {
     setTranscript('');
   };
 
+  const testElevenLabs = async () => {
+    const testText = "Hello! This is a test message to verify that ElevenLabs text-to-speech is working correctly.";
+    try {
+      setIsSpeaking(true);
+      
+      const response = await fetch('http://localhost:8000/tts/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: testText,
+          voice_id: selectedVoice,
+          model_id: 'eleven_monolingual_v1'
+        })
+      });
+
+      if (response.ok) {
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        
+        audio.onended = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(audioUrl);
+        };
+        
+        audio.onerror = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(audioUrl);
+          console.error('Error playing test audio');
+        };
+        
+        await audio.play();
+        console.log('Test audio played successfully');
+      } else {
+        console.error('Test TTS request failed:', response.status);
+        setIsSpeaking(false);
+      }
+    } catch (error) {
+      console.error('Error with test TTS:', error);
+      setIsSpeaking(false);
+    }
+  };
+
   if (!isSupported) {
     return (
       <div className="max-w-2xl mx-auto p-6 bg-red-50 border border-red-200 rounded-lg">
@@ -372,6 +386,22 @@ export default function VoiceUI() {
             >
               {isListening ? '🛑 Stop Listening' : '🎤 Start Listening'}
             </button>
+          </div>
+
+          {/* Test ElevenLabs Button */}
+          <div className="mb-4">
+            <button 
+              onClick={testElevenLabs}
+              disabled={isSpeaking}
+              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                'bg-green-500 text-white hover:bg-green-600'
+              } ${isSpeaking ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              🔊 Test ElevenLabs TTS
+            </button>
+            <p className="text-xs text-gray-600 mt-1">
+              Sends a test message to verify ElevenLabs integration
+            </p>
           </div>
 
           {/* Auto-Listen Toggle */}
