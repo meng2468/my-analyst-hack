@@ -23,59 +23,53 @@ from pipecat.services.llm_service import FunctionCallParams
 import contextvars
 from contextlib import AsyncExitStack
 
-session_id_var = contextvars.ContextVar("session_id_var")
-current_task_id = contextvars.ContextVar("current_task_id")
-
 load_dotenv(override=True)
 
 df = pd.read_csv("airline.csv")
-async def execute_dataframe_code(params: FunctionCallParams, code: str):
-    try:
-        session_id = session_id_var.get()
-    except LookupError:
-        result = "Could not determine your session. Please reconnect."
+
+# Create a function factory that captures the session_id
+def create_execute_dataframe_code(session_id):
+    async def execute_dataframe_code(params: FunctionCallParams, code: str):
+        print(f"Using session_id: {session_id}", flush=True)
+        
+        # Load session-specific dataframe
+        try:
+            # Try to load from data folder first (for uploaded files)
+            df = pd.read_csv(f"data/{session_id}.csv")
+            print(f"Loaded dataset from data/{session_id}.csv", flush=True)
+        except Exception as e:
+            print(f"no data found for session id {session_id} in data folder. error {e}", flush=True)
+            try:
+                # Fallback to current directory
+                df = pd.read_csv(f"{session_id}.csv")
+                print(f"Loaded dataset from {session_id}.csv", flush=True)
+            except Exception as e2:
+                print(f"no data found for session id {session_id} in current directory. error {e2}", flush=True)
+                # Final fallback to default dataset
+                df = pd.read_csv("airline.csv")
+                print("Using default airline dataset", flush=True)
+
+        safe_locals = {"df": df, "pd": pd}
+        output = io.StringIO()
+
+        try:
+            try:
+                compiled = compile(code, "<string>", "eval")
+                value = eval(compiled, {}, safe_locals)
+                result = str(value)
+            except SyntaxError:
+                with contextlib.redirect_stdout(output):
+                    exec(code, {}, safe_locals)
+                result = output.getvalue() or "Code executed, but did not return or print anything."
+        except Exception as e:
+            result = f"Error during execution: {e}"
+
+        print("code", code, flush=True)
+        print("result", result, flush=True)
         await params.result_callback({"result": result})
-        return
+    
+    return execute_dataframe_code
 
-    # Load session-specific dataframe
-    try:
-        # Try to load from data folder first (for uploaded files)
-        df = pd.read_csv(f"data/{session_id}.csv")
-        print(f"Loaded dataset from data/{session_id}.csv", flush=True)
-    except Exception as e:
-        print(f"no data found for session id {session_id} in data folder. error {e}", flush=True)
-        try:
-            # Fallback to current directory
-            df = pd.read_csv(f"{session_id}.csv")
-            print(f"Loaded dataset from {session_id}.csv", flush=True)
-        except Exception as e2:
-            print(f"no data found for session id {session_id} in current directory. error {e2}", flush=True)
-            # Final fallback to default dataset
-            df = pd.read_csv("airline.csv")
-            print("Using default airline dataset", flush=True)
-
-    safe_locals = {"df": df, "pd": pd}
-    output = io.StringIO()
-
-    try:
-        try:
-            compiled = compile(code, "<string>", "eval")
-            value = eval(compiled, {}, safe_locals)
-            result = str(value)
-        except SyntaxError:
-            with contextlib.redirect_stdout(output):
-                exec(code, {}, safe_locals)
-            result = output.getvalue() or "Code executed, but did not return or print anything."
-    except Exception as e:
-        result = f"Error during execution: {e}"
-
-    print("code", code, flush=True)
-    print("result", result, flush=True)
-    await params.result_callback({"result": result})
-
-
-# --- Register the tool directly ---
-tools = ToolsSchema(standard_tools=[execute_dataframe_code])
 
 # --- SYSTEM PROMPT: tell LLM how & when to use it ---
 SYSTEM_PROMPT = (
@@ -103,12 +97,15 @@ async def run_bot(webrtc_connection, session_id=None):
         ),
     )
 
+    # Create the execute_dataframe_code function with the session_id
+    execute_dataframe_code_func = create_execute_dataframe_code(session_id)
+
     llm = OpenAILLMService(
         api_key=os.getenv("OPENAI_API_KEY"),
         system_instruction=SYSTEM_PROMPT,
-        tools=tools,
+        tools=ToolsSchema(standard_tools=[execute_dataframe_code_func]),
     )
-    llm.register_direct_function(execute_dataframe_code)
+    llm.register_direct_function(execute_dataframe_code_func)
 
 
     tts = ElevenLabsTTSService(
@@ -124,7 +121,7 @@ async def run_bot(webrtc_connection, session_id=None):
     )
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    context = OpenAILLMContext(messages, tools=tools)
+    context = OpenAILLMContext(messages, tools=ToolsSchema(standard_tools=[execute_dataframe_code_func]))
     context_aggregator = llm.create_context_aggregator(context)
 
     # Pipeline: as usual
@@ -146,22 +143,24 @@ async def run_bot(webrtc_connection, session_id=None):
         ),
     )
 
+    # Store tokens at function scope so they can be accessed by event handlers
+    token_task = None
+
     @pipecat_transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
+        nonlocal token_task
         print('CLIENT DETAILS', client, flush=True)
         
         # Use the session_id passed to run_bot function
         logger.info(f"Pipecat Client connected. Session ID: {session_id}")
 
-        # Set both task and session context vars
-        token_task = current_task_id.set(id(task))
-        token_session = session_id_var.set(session_id)
+        # Set task context var
+        token_task = id(task)
 
         try:
             await task.queue_frames([context_aggregator.user().get_context_frame()])
         finally:
-            current_task_id.reset(token_task)
-            session_id_var.reset(token_session)
+            pass # No need to reset anything
 
 
     @pipecat_transport.event_handler("on_client_disconnected")
