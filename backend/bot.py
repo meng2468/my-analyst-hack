@@ -21,43 +21,33 @@ from pipecat.services.openai.stt import OpenAISTTService
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.llm_service import FunctionCallParams
 import contextvars
+from contextlib import AsyncExitStack
 
+session_id_var = contextvars.ContextVar("session_id_var")
 current_task_id = contextvars.ContextVar("current_task_id")
 
 load_dotenv(override=True)
 
 df = pd.read_csv("airline.csv")
-
-_session_id_map = {}
-
-def set_session_id_for_task(task_id, session_id):
-    _session_id_map[task_id] = session_id
-
-def get_session_id_for_task(task_id):
-    return _session_id_map.get(task_id)
-
 async def execute_dataframe_code(params: FunctionCallParams, code: str):
-    """
-    Executes provided Python code to analyze/manipulate the session's DataFrame `df`.
-    """
-    # Get the session_id for this task
-    task_id = current_task_id.get(None)
-    session_id = get_session_id_for_task(task_id) if task_id is not None else None
-
-    if not session_id:
+    try:
+        session_id = session_id_var.get()
+    except LookupError:
         result = "Could not determine your session. Please reconnect."
         await params.result_callback({"result": result})
         return
 
-    # Load the right dataframe for this user/session:
-    csv_path = f"{session_id}.csv"
+    # Load session-specific dataframe
     try:
-        df = pd.read_csv(csv_path)
+        df = pd.read_csv(f"{session_id}.csv")
     except Exception as e:
+        print(f"no data found for session id {session_id}. error {e}", flush=True)
         df = pd.read_csv("airline.csv")
+        #await params.result_callback({"result": f"no data found for session id {session_id}. error {e}"})
 
     safe_locals = {"df": df, "pd": pd}
     output = io.StringIO()
+
     try:
         try:
             compiled = compile(code, "<string>", "eval")
@@ -66,14 +56,14 @@ async def execute_dataframe_code(params: FunctionCallParams, code: str):
         except SyntaxError:
             with contextlib.redirect_stdout(output):
                 exec(code, {}, safe_locals)
-            result = output.getvalue()
-            if not result:
-                result = "Code executed, but did not return or print anything."
+            result = output.getvalue() or "Code executed, but did not return or print anything."
     except Exception as e:
         result = f"Error during execution: {e}"
+
     print("code", code, flush=True)
     print("result", result, flush=True)
     await params.result_callback({"result": result})
+
 
 # --- Register the tool directly ---
 tools = ToolsSchema(standard_tools=[execute_dataframe_code])
@@ -156,16 +146,19 @@ async def run_bot(webrtc_connection):
         session_id = getattr(client, "session_id", None)
         if session_id is None and hasattr(client, "info"):
             session_id = client.info.get("session_id")
+
         logger.info(f"Pipecat Client connected. Session ID: {session_id}")
 
-        set_session_id_for_task(id(task), session_id)
-        
-        # Set contextvar so any tool call is aware of this task
-        token = current_task_id.set(id(task))
+        # Set both task and session context vars
+        token_task = current_task_id.set(id(task))
+        token_session = session_id_var.set(session_id)
+
         try:
             await task.queue_frames([context_aggregator.user().get_context_frame()])
         finally:
-            current_task_id.reset(token)
+            current_task_id.reset(token_task)
+            session_id_var.reset(token_session)
+
 
     @pipecat_transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
