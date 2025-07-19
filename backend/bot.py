@@ -25,7 +25,6 @@ from contextlib import AsyncExitStack
 
 load_dotenv(override=True)
 
-df = pd.read_csv("airline.csv")
 
 # Create a function factory that captures the session_id
 def create_execute_dataframe_code(session_id):
@@ -70,6 +69,16 @@ def create_execute_dataframe_code(session_id):
     
     return execute_dataframe_code
 
+def get_df_column_info(session_id):
+    try:
+        df = pd.read_csv(f"data/{session_id}.csv")
+    except Exception:
+        try:
+            df = pd.read_csv(f"{session_id}.csv")
+        except Exception:
+            df = pd.read_csv("airline.csv")
+    col_info = ", ".join(f"{c} ({str(dt)})" for c, dt in zip(df.columns, df.dtypes))
+    return f"The dataset columns are: {col_info}."
 
 # --- SYSTEM PROMPT: tell LLM how & when to use it ---
 SYSTEM_PROMPT = (
@@ -120,7 +129,11 @@ async def run_bot(webrtc_connection, session_id=None):
         language=Language.EN,
     )
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    column_info_msg = get_df_column_info(session_id)
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": column_info_msg},
+    ]
     context = OpenAILLMContext(messages, tools=ToolsSchema(standard_tools=[execute_dataframe_code_func]))
     context_aggregator = llm.create_context_aggregator(context)
 
