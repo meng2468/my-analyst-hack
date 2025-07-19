@@ -1,10 +1,7 @@
-#
-# Copyright (c) 2025, Daily
-#
-# SPDX-License-Identifier: BSD 2-Clause License
-#
-
 import os
+import pandas as pd
+import io
+import contextlib
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -21,17 +18,33 @@ from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 from pipecat.transcriptions.language import Language
 from pipecat.services.openai.stt import OpenAISTTService
 
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
+from pipecat.services.llm_service import FunctionCallParams
+
 load_dotenv(override=True)
 
+# --- Hardcoded DataFrame ---
+df = pd.DataFrame({
+    'name': ['Alice', 'Bob', 'Charlie'],
+    'age': [25, 30, 35],
+    'salary': [70000, 80000, 90000],
+})
+
+# --- Function Tool: execute_df_code ---
+async def fetch_weather_from_api(params: FunctionCallParams):
+    weather_data = {"conditions": "sunny", "temperature": "75"}
+    await params.result_callback(weather_data)
+
+# --- Register the tool directly ---
+tools = ToolsSchema(standard_tools=[fetch_weather_from_api])
+
+# --- SYSTEM PROMPT: tell LLM how & when to use it ---
 SYSTEM_PROMPT = (
-    "You are an AI data analyst"
+    "helpfull assistant"
 )
 
 INTRO_MESSAGE = (
-    "You are Chatbot, a friendly, helpful robot. Your goal is to demonstrate your "
-    "capabilities in a succinct way. Your output will be converted to audio so don't "
-    "include special characters in your answers. Respond to what the user said in a creative "
-    "and helpful way, but keep your responses brief. Start by introducing yourself."
+    "Hello! I am your data analyst"
 )
 
 async def run_bot(webrtc_connection):
@@ -45,7 +58,13 @@ async def run_bot(webrtc_connection):
         ),
     )
 
-    llm = OpenAILLMService(api_key=os.getenv("OPENAI_API_KEY"))
+    llm = OpenAILLMService(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        system_instruction=SYSTEM_PROMPT,
+        tools=tools,
+    )
+    llm.register_direct_function(fetch_weather_from_api)
+
 
     tts = ElevenLabsTTSService(
         api_key=os.getenv("ELEVENLABS_API_KEY"),
@@ -60,9 +79,10 @@ async def run_bot(webrtc_connection):
     )
 
     messages = [{"role": "system", "content": INTRO_MESSAGE}]
-    context = OpenAILLMContext(messages)
+    context = OpenAILLMContext(messages, tools=tools)
     context_aggregator = llm.create_context_aggregator(context)
 
+    # Pipeline: as usual
     pipeline = Pipeline([
         pipecat_transport.input(),
         sst,
@@ -84,7 +104,6 @@ async def run_bot(webrtc_connection):
     @pipecat_transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         logger.info("Pipecat Client connected")
-        # Kick off the conversation with introduction.
         await task.queue_frames([context_aggregator.user().get_context_frame()])
 
     @pipecat_transport.event_handler("on_client_disconnected")
@@ -94,4 +113,3 @@ async def run_bot(webrtc_connection):
 
     runner = PipelineRunner(handle_sigint=False)
     await runner.run(task)
-    
