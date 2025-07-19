@@ -1,9 +1,3 @@
-#
-# Copyright (c) 2024–2025, Daily
-#
-# SPDX-License-Identifier: BSD 2-Clause License
-#
-
 import argparse
 import asyncio
 import sys
@@ -13,26 +7,60 @@ from typing import Dict
 import uvicorn
 from bot import run_bot
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI
-from fastapi.responses import FileResponse
+from fastapi import BackgroundTasks, FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import FileResponse, JSONResponse
 from loguru import logger
+import os
+import aiofiles
 
 from pipecat.transports.network.webrtc_connection import IceServer, SmallWebRTCConnection
 
 # Load environment variables
 load_dotenv(override=True)
 
-app = FastAPI()
+DATA_FOLDER = "data"
+os.makedirs(DATA_FOLDER, exist_ok=True)
 
-# Store connections by pc_id
 pcs_map: Dict[str, SmallWebRTCConnection] = {}
 
-
 ice_servers = [
-    IceServer(
-        urls="stun:stun.l.google.com:19302",
-    )
+    IceServer(urls="stun:stun.l.google.com:19302"),
 ]
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("App startup...")
+    yield
+    logger.info("App shutdown... Cleaning up WebRTC connections.")
+    coros = [pc.disconnect() for pc in pcs_map.values()]
+    await asyncio.gather(*coros)
+    pcs_map.clear()
+
+
+app = FastAPI(lifespan=lifespan)
+
+@app.post("/api/upload-csv")
+async def upload_csv(session_id: str, file: UploadFile = File(...)):
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed.")
+
+    # Save using session_id instead of original filename
+    file_location = os.path.join(DATA_FOLDER, f"{session_id}.csv")
+    
+    try:
+        async with aiofiles.open(file_location, "wb") as out_file:
+            content = await file.read()
+            await out_file.write(content)
+    except Exception as e:
+        logger.error(f"Failed to save file: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save file.")
+
+    return {"success": True, "filename": f"{session_id}.csv"}
+
+
+@app.get("/api/test")
+async def test():
+    return {"status": "ok"}
 
 
 @app.post("/api/offer")
@@ -55,40 +83,21 @@ async def offer(request: dict, background_tasks: BackgroundTasks):
         background_tasks.add_task(run_bot, pipecat_connection)
 
     answer = pipecat_connection.get_answer()
-    # Updating the peer connection inside the map
     pcs_map[answer["pc_id"]] = pipecat_connection
-
     return answer
 
 
 @app.get("/")
 async def serve_index():
     return FileResponse("index.html")
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield  # Run app
-    coros = [pc.disconnect() for pc in pcs_map.values()]
-    await asyncio.gather(*coros)
-    pcs_map.clear()
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="WebRTC demo")
-    parser.add_argument(
-        "--host", default="localhost", help="Host for HTTP server (default: localhost)"
-    )
-    parser.add_argument(
-        "--port", type=int, default=7860, help="Port for HTTP server (default: 7860)"
-    )
+    parser.add_argument("--host", default="localhost", help="Host for HTTP server (default: localhost)")
+    parser.add_argument("--port", type=int, default=7860, help="Port for HTTP server (default: 7860)")
     parser.add_argument("--verbose", "-v", action="count")
     args = parser.parse_args()
 
     logger.remove(0)
-    if args.verbose:
-        logger.add(sys.stderr, level="TRACE")
-    else:
-        logger.add(sys.stderr, level="DEBUG")
+    logger.add(sys.stderr, level="TRACE" if args.verbose else "DEBUG")
 
     uvicorn.run(app, host=args.host, port=args.port)

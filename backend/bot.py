@@ -20,27 +20,50 @@ from pipecat.services.openai.stt import OpenAISTTService
 
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.llm_service import FunctionCallParams
+import contextvars
+
+current_task_id = contextvars.ContextVar("current_task_id")
 
 load_dotenv(override=True)
 
 df = pd.read_csv("airline.csv")
 
+_session_id_map = {}
+
+def set_session_id_for_task(task_id, session_id):
+    _session_id_map[task_id] = session_id
+
+def get_session_id_for_task(task_id):
+    return _session_id_map.get(task_id)
 
 async def execute_dataframe_code(params: FunctionCallParams, code: str):
     """
-    Executes provided Python code to analyze/manipulate the globally loaded DataFrame `df`.
-    Returns the text output, or the result of the last expression if any.
+    Executes provided Python code to analyze/manipulate the session's DataFrame `df`.
     """
+    # Get the session_id for this task
+    task_id = current_task_id.get(None)
+    session_id = get_session_id_for_task(task_id) if task_id is not None else None
+
+    if not session_id:
+        result = "Could not determine your session. Please reconnect."
+        await params.result_callback({"result": result})
+        return
+
+    # Load the right dataframe for this user/session:
+    csv_path = f"{session_id}.csv"
+    try:
+        df = pd.read_csv(csv_path)
+    except Exception as e:
+        df = pd.read_csv("airline.csv")
+
     safe_locals = {"df": df, "pd": pd}
     output = io.StringIO()
     try:
-        # Try to compile as an expression first (e.g., 'len(df)')
         try:
             compiled = compile(code, "<string>", "eval")
             value = eval(compiled, {}, safe_locals)
             result = str(value)
         except SyntaxError:
-            # Not an expression, treat as a block
             with contextlib.redirect_stdout(output):
                 exec(code, {}, safe_locals)
             result = output.getvalue()
@@ -130,8 +153,19 @@ async def run_bot(webrtc_connection):
 
     @pipecat_transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
-        logger.info("Pipecat Client connected")
-        await task.queue_frames([context_aggregator.user().get_context_frame()])
+        session_id = getattr(client, "session_id", None)
+        if session_id is None and hasattr(client, "info"):
+            session_id = client.info.get("session_id")
+        logger.info(f"Pipecat Client connected. Session ID: {session_id}")
+
+        set_session_id_for_task(id(task), session_id)
+        
+        # Set contextvar so any tool call is aware of this task
+        token = current_task_id.set(id(task))
+        try:
+            await task.queue_frames([context_aggregator.user().get_context_frame()])
+        finally:
+            current_task_id.reset(token)
 
     @pipecat_transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
