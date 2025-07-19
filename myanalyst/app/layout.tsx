@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`w-dvw h-dvh bg-gray-100`}
+        className={`w-dvw h-dvh bg-gray-100 flex items-center justify-center`}
       >
         {children}
       </body>
