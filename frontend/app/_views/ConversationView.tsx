@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import AudioVisualizer from '@/app/_components/audio-visualizer';
+import { LoadingSpinnerWithText } from '@/components/ui/loading-spinner';
 
 export default function ConversationView({ sessionId }: { sessionId: string }) {
   const [status, setStatus] = useState('Disconnected');
@@ -9,6 +11,17 @@ export default function ConversationView({ sessionId }: { sessionId: string }) {
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const pcIdRef = useRef<string | null>(null);
+  const [userStream, setUserStream] = useState<MediaStream | null>(null);
+
+  // Auto-connect when component mounts
+  useEffect(() => {
+    connect();
+    
+    // Cleanup on unmount
+    return () => {
+      disconnect();
+    };
+  }, []); // Empty dependency array means this runs once on mount
 
   const waitForIceGatheringComplete = async (pc: RTCPeerConnection, timeoutMs = 2000) => {
     if (pc.iceGatheringState === 'complete') return;
@@ -117,6 +130,7 @@ export default function ConversationView({ sessionId }: { sessionId: string }) {
     try {
       setStatus('Connecting');
       const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setUserStream(audioStream); // Store user stream for visualization
       peerConnectionRef.current = await createSmallWebRTCConnection(audioStream.getAudioTracks()[0]);
       setStatus('Connected');
       setConnected(true);
@@ -136,6 +150,7 @@ export default function ConversationView({ sessionId }: { sessionId: string }) {
     pcIdRef.current = null; // Clear the pc_id when disconnecting
     setStatus('Disconnected');
     setConnected(false);
+    setUserStream(null); // Clear user stream
   };
 
   const handleButtonClick = async () => {
@@ -147,18 +162,36 @@ export default function ConversationView({ sessionId }: { sessionId: string }) {
   };
 
   return (
-    <div className="">
-      <div className="">
-        <h1 className="text-3xl font-bold mb-6">WebRTC Voice Agent</h1>
-        <p className="text-xl mb-6">{status}</p>
-        <Button
-          onClick={handleButtonClick}
-          variant={connected ? "destructive" : "default"}
-          size="lg"
-          className="w-full"
-        >
-          {connected ? 'Disconnect' : 'Connect'}
-        </Button>
+    <div className="flex flex-col items-center justify-center min-h-screen p-6">
+      <div className="w-full max-w-md space-y-6">
+        
+        {/* Show loading while connecting, audio visualizer only when connected */}
+        {status === 'Connecting' ? (
+          <div className="flex justify-center mb-6">
+            <LoadingSpinnerWithText 
+              text="Connecting to conversation..." 
+              size="lg"
+              className="text-center"
+            />
+          </div>
+        ) : status === 'Connected' ? (
+          <AudioVisualizer 
+            audioElement={audioRef.current}
+            userStream={userStream}
+            className="mb-6"
+          />
+        ) : null}
+        
+        {status !== 'Connecting' && (
+          <Button
+            onClick={handleButtonClick}
+            variant={connected ? "destructive" : "default"}
+            size="lg"
+            className="w-full"
+          >
+            {connected ? 'End Conversation' : 'Connect'}
+          </Button>
+        )}
         <audio ref={audioRef} autoPlay className="hidden" />
       </div>
     </div>
