@@ -2,3 +2,4 @@
 backend/.env
 myanalyst/.env
 backend/venv/*
+backend/data
