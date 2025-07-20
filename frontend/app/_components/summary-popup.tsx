@@ -27,7 +27,7 @@ export default function SummarySection({
     
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/report', {
+      const response = await fetch('http://localhost:7860/api/report', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
