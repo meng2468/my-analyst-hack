@@ -45,7 +45,7 @@ def fit_col_widths(df, max_width=MAX_TABLE_WIDTH):
     base_width = max_width / n
     return [base_width] * n
 
-def generate_pdf_report(csv_filename, pdf_filename):
+def generate_pdf_report(csv_filename, pdf_filename, summary:str):
     df = pd.read_csv(csv_filename)
     dataset_name = os.path.basename(csv_filename)
     styles = getSampleStyleSheet()
@@ -63,6 +63,26 @@ def generate_pdf_report(csv_filename, pdf_filename):
     # Title and dataset name
     story.append(Paragraph("Data Analysis Report", styles['MyHeading']))
     story.append(Paragraph(f"Dataset: <b>{dataset_name}</b>", styles['MySubtitle']))
+
+    # --------- SUMMARY (pretty printed) ---------
+    # Add a new style for summary box
+    styles.add(ParagraphStyle(
+        name='SummaryBox',
+        fontName='Helvetica',
+        fontSize=10,
+        textColor=colors.HexColor('#07354f'),
+        backColor=colors.HexColor('#eef3fb'),
+        borderColor=colors.HexColor('#bdd8e6'),
+        borderWidth=1,
+        borderPadding=8,
+        leading=14,
+        leftIndent=0,  # no indent - full width
+        rightIndent=0,
+        spaceBefore=10,
+        spaceAfter=12,
+    ))
+    story.append(Paragraph(summary, styles['SummaryBox']))
+
 
     # General info
     story.append(Paragraph(f"Rows: <b>{df.shape[0]}</b>, Columns: <b>{df.shape[1]}</b>", styles['MyNorm']))

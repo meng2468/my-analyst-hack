@@ -8,6 +8,9 @@
         body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
         #status { font-size: 20px; margin: 20px; }
         button { padding: 10px 20px; font-size: 16px; }
+        input[type=email] { padding:8px; font-size:16px; width:250px; }
+        #summary-result { margin-top: 20px; font-size: 18px; }
+        .summarize-section { margin-top:40px }
     </style>
 </head>
 <body>
@@ -15,6 +18,13 @@
     <p id="status">Disconnected</p>
     <button id="connect-btn">Connect</button>
     <audio id="audio-el" autoplay></audio>
+
+    <!-- Summarize UI -->
+    <div class="summarize-section">
+        <input type="email" id="email-input" placeholder="Enter your email" value="thorekoritzius@outlook.de">
+        <button id="summarize-btn">Summarize</button>
+        <div id="summary-result"></div>
+    </div>
 
     <script>
         const statusEl = document.getElementById("status")
@@ -67,7 +77,7 @@
             await waitForIceGatheringComplete(pc)
             const offer = pc.localDescription
             const response = await fetch('/api/offer', {
-                body: JSON.stringify({ sdp: offer.sdp, type: offer.type}),
+                body: JSON.stringify({ sdp: offer.sdp, type: offer.type, session_id: 'airline'}),
                 headers: { 'Content-Type': 'application/json' },
                 method: 'POST',
             });
@@ -137,6 +147,42 @@
             } else {
                 disconnect()
             }
+        });
+
+        // Summarize logic
+        const summarizeBtn = document.getElementById("summarize-btn");
+        const emailInput = document.getElementById("email-input");
+        const summaryResult = document.getElementById("summary-result");
+
+        summarizeBtn.addEventListener("click", async () => {
+            const email = emailInput.value.trim();
+            if (!email) {
+                summaryResult.innerHTML = "<span style='color:red'>Please enter a valid email.</span>";
+                return;
+            }
+            summarizeBtn.disabled = true;
+            summarizeBtn.textContent = "Summarizing...";
+            summaryResult.textContent = "";
+            try {
+                const resp = await fetch("/api/summarize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        session_id: "airline", // Use your actual session id if needed
+                        email,
+                    })
+                });
+                if (!resp.ok) {
+                    throw new Error("Request failed");
+                }
+                const data = await resp.json();
+                summaryResult.innerHTML = `<b>Summary:</b> ${data.summary}<br>
+                    <a href="${data.report_url}" target="_blank">Download PDF Report</a>`;
+            } catch (err) {
+                summaryResult.innerHTML = "<span style='color:red'>Failed to summarize. Try again.</span>";
+            }
+            summarizeBtn.disabled = false;
+            summarizeBtn.textContent = "Summarize";
         });
     </script>
 </body>

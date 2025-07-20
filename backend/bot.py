@@ -22,9 +22,59 @@ from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.llm_service import FunctionCallParams
 import contextvars
 from contextlib import AsyncExitStack
+from openai import OpenAI
 
 load_dotenv(override=True)
 
+client = OpenAI()
+
+chat_histories = {}
+
+def add_to_chat_history(session_id, role, content):
+    if session_id not in chat_histories:
+        chat_histories[session_id] = []
+    chat_histories[session_id].append({"role": role, "content": content})
+    print("chat_history", chat_histories[session_id],flush=True)
+
+def get_chat_history(session_id):
+    """Return chat history list for a session_id."""
+    return chat_histories.get(session_id, [])
+
+async def summarize_chat_history(session_id: str, report_url: str):
+    """
+    Summarize the chat history for the given session_id using a new LLM instance.
+    The summary includes key insights and highlights.
+    Returns a string summary.
+    """
+    chat_history = get_chat_history(session_id)
+    if not chat_history:
+        return "Hey, I generated your report is ready. Best, your favorite AI Data Agent"
+    
+    summarization_prompt = (
+        "You will receive a transcript of a conversation between a user and an AI assistant engaged in data analysis. "
+        f"Your output should be a E-Mail-Body with greetings and conclusion and the main key, concise and valuable insights. It must be a business report keep it professional with key insights like you are a data analyst."
+    )
+    
+    # Build the LLM context
+    messages = [
+        {"role": "system", "content": summarization_prompt},
+    ]
+    transcript = ""
+    for msg in chat_history:
+        transcript += f"{msg['role'].capitalize()}: {msg['content']}\n"
+    messages.append({"role": "user", "content": f"Here is the conversation transcript:\n\n{transcript}\n\nPlease provide the summary."})
+        
+    try:
+        response =  client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=messages
+        )
+        summary = response.choices[0].message.content.strip()
+
+    except Exception as e:
+        summary = f"Error generating summary: {e}"
+
+    return summary
 
 # Create a function factory that captures the session_id
 def create_execute_dataframe_code(session_id):
@@ -66,6 +116,7 @@ def create_execute_dataframe_code(session_id):
         print("code", code, flush=True)
         print("result", result, flush=True)
         await params.result_callback({"result": result})
+        add_to_chat_history(session_id, "assistant", result)
     
     return execute_dataframe_code
 
@@ -116,7 +167,6 @@ async def run_bot(webrtc_connection, session_id=None):
     )
     llm.register_direct_function(execute_dataframe_code_func)
 
-
     tts = ElevenLabsTTSService(
         api_key=os.getenv("ELEVENLABS_API_KEY"),
         voice_id=os.getenv("ELEVENLABS_VOICE_ID"),
@@ -137,7 +187,6 @@ async def run_bot(webrtc_connection, session_id=None):
     context = OpenAILLMContext(messages, tools=ToolsSchema(standard_tools=[execute_dataframe_code_func]))
     context_aggregator = llm.create_context_aggregator(context)
 
-    # Pipeline: as usual
     pipeline = Pipeline([
         pipecat_transport.input(),
         sst,
@@ -156,25 +205,34 @@ async def run_bot(webrtc_connection, session_id=None):
         ),
     )
 
-    # Store tokens at function scope so they can be accessed by event handlers
     token_task = None
 
+    # On client connection, send a greeting and store it in the chat history.
     @pipecat_transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         nonlocal token_task
-        print('CLIENT DETAILS', client, flush=True)
-        
-        # Use the session_id passed to run_bot function
+        print('CLIENT DETAILS:', client, flush=True)
         logger.info(f"Pipecat Client connected. Session ID: {session_id}")
-
-        # Set task context var
         token_task = id(task)
+        add_to_chat_history(session_id, "assistant", INTRO_MESSAGE)
+        # Send context frame
+        await task.queue_frames([context_aggregator.user().get_context_frame()])
 
-        try:
-            await task.queue_frames([context_aggregator.user().get_context_frame()])
-        finally:
-            pass # No need to reset anything
+    # Example event handler for when the STT service returns a recognized user message.
+    @pipecat_transport.event_handler("on_stt_result")
+    async def on_stt_result(transport, stt_result):
+        # Assuming stt_result contains a 'text' key with the recognized message.
+        user_message = stt_result.get("text")
+        if user_message:
+            add_to_chat_history(session_id, "user", user_message)
+            logger.info(f"User ({session_id}) said: {user_message}")
 
+    # Example event handler for when an assistant reply is generated.
+    @pipecat_transport.event_handler("on_assistant_reply")
+    async def on_assistant_reply(transport, assistant_reply):
+        # Assuming assistant_reply is plain text.
+        add_to_chat_history(session_id, "assistant", assistant_reply)
+        logger.info(f"Assistant reply (session {session_id}): {assistant_reply}")
 
     @pipecat_transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):

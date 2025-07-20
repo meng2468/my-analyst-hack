@@ -4,8 +4,9 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Dict
 
+from pydantic import BaseModel
 import uvicorn
-from bot import run_bot
+from bot import run_bot, summarize_chat_history
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
@@ -13,6 +14,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 import os
 import aiofiles
+import report
+import mail
+
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
+import os
+
+
+class SummarizeRequest(BaseModel):
+    session_id: str
+    email: str
 
 from pipecat.transports.network.webrtc_connection import IceServer, SmallWebRTCConnection
 
@@ -21,6 +34,9 @@ load_dotenv(override=True)
 
 DATA_FOLDER = "data"
 os.makedirs(DATA_FOLDER, exist_ok=True)
+
+REPORTS_FOLDER = "reports"
+os.makedirs(REPORTS_FOLDER, exist_ok=True)
 
 pcs_map: Dict[str, SmallWebRTCConnection] = {}
 
@@ -66,6 +82,24 @@ async def upload_csv(session_id: str, file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="Failed to save file.")
 
     return {"success": True, "filename": f"{session_id}.csv"}
+
+app.mount("/reports", StaticFiles(directory="reports"), name="reports")
+
+@app.post("/api/summarize")
+async def summarize(request: SummarizeRequest):
+    pdf_name = f"{request.session_id}.pdf"
+    pdf_path = f"{REPORTS_FOLDER}/{pdf_name}"
+    report_url = f"http://localhost:7860/reports/{pdf_name}"
+    summary = await summarize_chat_history(request.session_id, report_url)
+    print("summary", summary, flush=True)
+    report.generate_pdf_report(f"{request.session_id}.csv", pdf_path, summary)
+    
+    mail.send_mail(
+        request.email, 
+        summary
+    )
+
+    return {"summary": summary, "report_url": report_url}
 
 
 @app.get("/api/test")
