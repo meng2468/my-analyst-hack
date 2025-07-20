@@ -7,7 +7,17 @@ import { LoadingSpinnerWithText } from '@/components/ui/loading-spinner';
 import { Mic, MicOff, PhoneOff, Database } from 'lucide-react';
 import { motion } from 'motion/react';
 
-export default function ConversationView({ sessionId, step, setStep }: { sessionId: string, step: number, setStep: (step: number) => void }) {
+export default function ConversationView({ 
+  sessionId, 
+  step, 
+  setStep,
+  onStepChange 
+}: { 
+  sessionId: string, 
+  step: number, 
+  setStep: (step: number) => void,
+  onStepChange?: (newStep: number) => void
+}) {
   const [status, setStatus] = useState('Disconnected');
   const [connected, setConnected] = useState(false);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -309,7 +319,13 @@ export default function ConversationView({ sessionId, step, setStep }: { session
       {connected && step === 1 && (
         <div className="absolute bottom-4 w-full flex justify-center">
           <Button
-            onClick={() => setStep(2)}
+            onClick={() => {
+              disconnect();
+              setStep(2);
+              if (onStepChange) {
+                onStepChange(2);
+              }
+            }}
             variant="default"
             className="w-48 h-12 flex items-center justify-center rounded-full cursor-pointer"
             title="Generate Summary"

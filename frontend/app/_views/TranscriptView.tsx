@@ -1,4 +1,4 @@
-import { RotateCcw, Download } from 'lucide-react'
+import { RotateCcw, Download, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function TranscriptView({ sessionId, setStep }: { sessionId: string, setStep: (step: number) => void }) {
@@ -16,6 +16,10 @@ export default function TranscriptView({ sessionId, setStep }: { sessionId: stri
     const handleDownload = () => {
         // Dummy download functionality
         console.log('Download clicked')
+    }
+
+    const handleGenerateSummary = () => {
+        setStep(3);
     }
 
     return (
@@ -45,6 +49,15 @@ export default function TranscriptView({ sessionId, setStep }: { sessionId: stri
                     title="Download"
                 >
                     <Download size={20} />
+                </Button>
+                <Button
+                    onClick={handleGenerateSummary}
+                    size="icon"
+                    variant="default"
+                    className="rounded-full cursor-pointer"
+                    title="Generate Summary"
+                >
+                    <Database size={20} />
                 </Button>
                 <Button
                     onClick={() => setStep(0)}
