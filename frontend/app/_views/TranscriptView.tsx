@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useCallback,useRef } from 'react'
 import { RotateCcw, Download, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import AgentProgressView from './BackgroundAgent'
@@ -141,7 +141,7 @@ export default function TranscriptView({
         }
         if (msg.role === 'image') {
             renderedMessages.push(
-                <ImageCard base64={msg.content} key={`img-${i}`} />
+                <ExpandableImageCard base64={msg.content}  key={`img-${i}`}  />
             )
             continue
         }
@@ -201,62 +201,151 @@ export default function TranscriptView({
 
     const handleGenerateSummary = () => setStep(3)
 
+    const lastImageMsg = [...messages].reverse().find(m => m.role === "image");
+
+    
+function ExpandableImageCard({ base64 }: { base64: string }) {
+    const [hovered, setHovered] = useState(false);
+  
+    // Only show popup on "fine pointer" (not touch): CSS + JS media query
+    const isDesktop = typeof window !== "undefined"
+      ? window.matchMedia("(hover: hover) and (pointer: fine)").matches
+      : true;
+  
+    // Optionally darken background a bit for clarity
+    return (
+      <>
+        <div
+          className="transition-transform cursor-zoom-in hover:scale-105"
+          tabIndex={0}
+          title="Hover to expand"
+          onMouseEnter={() => isDesktop && setHovered(true)}
+          onMouseLeave={() => isDesktop && setHovered(false)}
+          style={{ display: "flex", justifyContent: "center", position: "relative", zIndex: 1 }}
+        >
+          <img
+            src={`data:image/png;base64,${base64}`}
+            alt="Result graph"
+            className="max-h-[260px] max-w-full rounded shadow-lg"
+            draggable={false}
+          />
+        </div>
+        {/* Centered popup on hover, only on desktop */}
+        {isDesktop && hovered && (
+          <>
+            <div
+              className="fixed inset-0 bg-black bg-opacity-30 z-50 transition-opacity duration-100"
+              style={{ pointerEvents: "none" }}
+              aria-hidden="true"
+            />
+            <div
+              className="
+                fixed z-[99] flex items-center justify-center
+                inset-0
+                transition-opacity duration-100
+                pointer-events-none
+              "
+            >
+              <div
+                className="bg-white rounded-xl shadow-2xl border border-gray-100 flex items-center justify-center"
+                style={{
+                  maxWidth: "90vw",
+                  maxHeight: "80vh",
+                  padding: 24,
+                  pointerEvents: "none" // makes sure it disappears as soon as mouse leaves thumbnail
+                }}
+              >
+                <img
+                  src={`data:image/png;base64,${base64}`}
+                  alt="Expanded result graph"
+                  className="rounded-lg shadow-lg"
+                  style={{
+                    width: "auto",
+                    height: "520px", // 2x original 260px
+                    maxHeight: "70vh",
+                    maxWidth: "80vw",
+                    objectFit: "contain",
+                  }}
+                  draggable={false}
+                />
+              </div>
+            </div>
+          </>
+        )}
+      </>
+    );
+  }
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-white p-4 rounded-lg relative">
-            <div
+          <div className="flex w-full max-w-4xl gap-6 mx-auto">
+            {/* Transcript area */}
+            <div className="flex-1">
+              <div
                 className="
-          w-full max-w-2xl flex-1
-          bg-gray-50 rounded-lg border border-gray-100 shadow
-          p-6
-          mb-16
-          overflow-y-auto
-          max-h-[430px]
-          transition-all"
+                  bg-gray-50 rounded-lg border border-gray-100 shadow
+                  p-6 mb-16 overflow-y-auto max-h-[430px]
+                  transition-all
+                "
                 style={{ minHeight: '220px' }}
-            >
+              >
                 {messages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full w-full text-gray-400">
-                        Waiting for transcript...
-                    </div>
+                  <div className="flex items-center justify-center h-full w-full text-gray-400">
+                    Waiting for transcript...
+                  </div>
                 ) : (
-                    <div className="flex flex-col gap-3">
-                        {renderedMessages}
-                        <div ref={transcriptEndRef}></div>
-                    </div>
+                  <div className="flex flex-col gap-3">
+                    {renderedMessages}
+                    <div ref={transcriptEndRef}></div>
+                  </div>
                 )}
+              </div>
+              <AgentProgressView sessionId={sessionId} totalRows={20} />
             </div>
-            <AgentProgressView sessionId={sessionId} totalRows={20} />
-
-            {/* Floating Buttons */}
-            <div className="absolute bottom-4 right-4 flex gap-2">
-                <Button
-                    onClick={handleDownload}
-                    size="icon"
-                    variant="default"
-                    className="rounded-full cursor-pointer"
-                    title="Download"
-                >
-                    <Download size={20} />
-                </Button>
-                <Button
-                    onClick={handleGenerateSummary}
-                    size="icon"
-                    variant="default"
-                    className="rounded-full cursor-pointer"
-                    title="Generate Summary"
-                >
-                    <Database size={20} />
-                </Button>
-                <Button
-                    onClick={() => setStep(0)}
-                    size="icon"
-                    variant="secondary"
-                    className="rounded-full cursor-pointer"
-                    title="Restart"
-                >
-                    <RotateCcw size={20} />
-                </Button>
-            </div>
+      
+            {/* --- Image column, shown only if an image exists and on desktop --- */}
+            {lastImageMsg && (
+            <aside className="hidden md:flex flex-col items-center mt-2 w-[320px] min-w-[240px] max-w-[340px]">
+                <div className="sticky top-8 w-full">
+                <div className="bg-white shadow-lg rounded-xl border border-gray-100 p-4 flex flex-col items-center">
+                    <span className="text-gray-500 text-xs font-semibold mb-2 tracking-wide">
+                    Latest Graph/Chart
+                    </span>
+                    <ExpandableImageCard base64={lastImageMsg.content} />
+                </div>
+                </div>
+            </aside>
+            )}
+          </div>
+          {/* Floating Buttons (unchanged) */}
+          <div className="absolute bottom-4 right-4 flex gap-2">
+            <Button
+              onClick={handleDownload}
+              size="icon"
+              variant="default"
+              className="rounded-full cursor-pointer"
+              title="Download"
+            >
+              <Download size={20} />
+            </Button>
+            <Button
+              onClick={handleGenerateSummary}
+              size="icon"
+              variant="default"
+              className="rounded-full cursor-pointer"
+              title="Generate Summary"
+            >
+              <Database size={20} />
+            </Button>
+            <Button
+              onClick={() => setStep(0)}
+              size="icon"
+              variant="secondary"
+              className="rounded-full cursor-pointer"
+              title="Restart"
+            >
+              <RotateCcw size={20} />
+            </Button>
+          </div>
         </div>
-    )
+      )
 }
