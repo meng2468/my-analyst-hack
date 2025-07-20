@@ -290,10 +290,13 @@ async def run_bot(webrtc_connection, session_id=None):
 
     @transcript.event_handler("on_transcript_update")
     async def handle_update(processor, frame):
-        for message in frame.messages:
-            line = f"{message.role}: {message.content}"
-            print(f"on_transcript_update {line}")
-            await broadcaster.push(line)
+        if not frame.messages:
+            return
+        latest = frame.messages[-1]
+        # Now process `latest`, e.g.:
+        line = f"{latest.role}: {latest.content}"
+        print(line)
+        await broadcaster.push(line)
             
     runner = PipelineRunner(handle_sigint=False)
     await runner.run(task)

@@ -55,8 +55,13 @@ export default function TranscriptView({
     const url = `http://localhost:7860/api/transcript-events${sessionId ? `?session_id=${sessionId}` : ''}`
     const evtSource = new EventSource(url)
     evtSource.onmessage = event => {
-      setLines(prev => [...prev, event.data])
-    }
+        setLines(prev => {
+          if (prev.length > 0 && prev[prev.length - 1] === event.data) {
+            return prev // ignore duplicate
+          }
+          return [...prev, event.data]
+        })
+      }
     evtSource.onerror = () => {
       evtSource.close()
     }

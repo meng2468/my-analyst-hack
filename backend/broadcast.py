@@ -37,4 +37,3 @@ class EnrichmentBroadcaster:
 
 broadcaster = TranscriptBroadcaster()
 enrichment_broadcaster = EnrichmentBroadcaster()
-broadcaster = TranscriptBroadcaster()
