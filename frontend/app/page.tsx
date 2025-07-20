@@ -21,8 +21,7 @@ export default function Home() {
   }, [file]);
 
   return (
-    <div className="w-full max-w-xl mx-auto h-2/3 bg-white rounded-lg flex flex-col items-center justify-evenly p-8">
-      <h1 className="text-4xl font-bold">Welcome to <span className="">MyAnalyst</span></h1>
+    <div className="w-full max-w-xl mx-auto h-2/3 rounded-lg flex flex-col items-center justify-evenly p-8">
       <div className="h-2/3 w-full flex flex-col items-center justify-center gap-6">
         {currentStep === 0 && (
           <UploadView sessionId={sessionId} setSessionFile={setFile} />
@@ -34,7 +33,7 @@ export default function Home() {
           <div className="text-sm text-gray-500">Summary</div>
         )}
       </div>
-      <div className="text-sm text-gray-500">Session ID: {sessionId}</div>
+      {/* <div className="text-sm text-gray-500">Session ID: {sessionId}</div> */}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import AudioVisualizer from '@/app/_components/audio-visualizer';
 import { LoadingSpinnerWithText } from '@/components/ui/loading-spinner';
+import { Mic, MicOff, PhoneOff, Database } from 'lucide-react';
 
 export default function ConversationView({ sessionId }: { sessionId: string }) {
   const [status, setStatus] = useState('Disconnected');
@@ -12,6 +13,7 @@ export default function ConversationView({ sessionId }: { sessionId: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const pcIdRef = useRef<string | null>(null);
   const [userStream, setUserStream] = useState<MediaStream | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
 
   // Auto-connect when component mounts
   useEffect(() => {
@@ -161,6 +163,21 @@ export default function ConversationView({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const toggleMute = () => {
+    if (userStream) {
+      const audioTrack = userStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
+    }
+  };
+
+  const handleStartWithAnotherDataset = () => {
+    // TODO: Implement dataset switching functionality
+    console.log('Start with another dataset clicked');
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6">
       <div className="w-full max-w-md space-y-6">
@@ -183,14 +200,60 @@ export default function ConversationView({ sessionId }: { sessionId: string }) {
         ) : null}
         
         {status !== 'Connecting' && (
-          <Button
-            onClick={handleButtonClick}
-            variant={connected ? "destructive" : "default"}
-            size="lg"
-            className="w-full"
-          >
-            {connected ? 'End Conversation' : 'Connect'}
-          </Button>
+          <div className="space-y-3">
+            {!connected ? (
+              <Button
+                onClick={handleButtonClick}
+                variant="default"
+                size="lg"
+                className="w-full"
+              >
+                Connect
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <Button
+                    onClick={toggleMute}
+                    variant={isMuted ? "destructive" : "outline"}
+                    size="lg"
+                    className="flex-1 cursor-pointer"
+                  >
+                    {isMuted ? (
+                      <>
+                        <MicOff className="w-4 h-4 mr-2" />
+                        Unmute
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-4 h-4 mr-2" />
+                        Mute
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleButtonClick}
+                    variant="destructive"
+                    size="lg"
+                    className="flex-1 cursor-pointer"
+                  >
+                    <PhoneOff className="w-4 h-4 mr-2" />
+                    End Conversation
+                  </Button>
+                </div>
+                
+                <Button
+                  onClick={handleStartWithAnotherDataset}
+                  variant="outline"
+                  size="lg"
+                  className="w-full cursor-pointer"
+                >
+                  <Database className="w-4 h-4 mr-2" />
+                  Start with Another Dataset
+                </Button>
+              </div>
+            )}
+          </div>
         )}
         <audio ref={audioRef} autoPlay className="hidden" />
       </div>

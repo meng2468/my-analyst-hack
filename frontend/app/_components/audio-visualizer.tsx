@@ -165,58 +165,9 @@ export default function AudioVisualizer({ audioElement, userStream, className = 
 
   return (
     <div className={`flex flex-col items-center gap-4 ${className}`}>
-      {/* Debug info */}
-      <div className="text-xs text-gray-500">
-        Bot: {isActive ? 'Active' : 'Inactive'} ({Math.round(botAmplitude * 100)}%) | 
-        User: {userIsActive ? 'Active' : 'Inactive'} ({Math.round(userAmplitude * 100)}%)
-      </div>
       
-      {/* Bot Audio Line */}
-      {isActive && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-blue-600 font-medium">Bot</span>
-          <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-blue-500 rounded-full"
-              animate={{
-                width: `${botAmplitude * 100}%`
-              }}
-              transition={{
-                duration: 0.1,
-                ease: "easeOut"
-              }}
-            />
-          </div>
-          <span className="text-xs text-gray-500 w-8">
-            {Math.round(botAmplitude * 100)}%
-          </span>
-        </div>
-      )}
-
-      {/* User Audio Line */}
-      {userIsActive && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-green-600 font-medium">You</span>
-          <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-green-500 rounded-full"
-              animate={{
-                width: `${userAmplitude * 100}%`
-              }}
-              transition={{
-                duration: 0.1,
-                ease: "easeOut"
-              }}
-            />
-          </div>
-          <span className="text-xs text-gray-500 w-8">
-            {Math.round(userAmplitude * 100)}%
-          </span>
-        </div>
-      )}
-
       {/* Dynamic Equalizer Bars */}
-      <div className="flex items-end gap-1 h-20">
+      <div className="flex items-end gap-1 h-48">
         {[...Array(8)].map((_, i) => {
           const botFreq = botFrequencies[i] || 0;
           const userFreq = userFrequencies[i] || 0;
@@ -226,14 +177,14 @@ export default function AudioVisualizer({ audioElement, userStream, className = 
           return (
             <motion.div
               key={i}
-              className="w-3 rounded-t"
+              className="w-8 rounded-t"
               style={{
                 background: isBotDominant 
                   ? `linear-gradient(to top, #3b82f6, #60a5fa)` 
                   : `linear-gradient(to top, #22c55e, #4ade80)`
               }}
               animate={{
-                height: `${Math.max(4, totalFreq * 80)}px`,
+                height: `${Math.max(4, totalFreq * 200)}px`,
                 scaleY: [1, 1.1, 1],
               }}
               transition={{
@@ -247,12 +198,6 @@ export default function AudioVisualizer({ audioElement, userStream, className = 
             />
           );
         })}
-      </div>
-
-      {/* Frequency Labels */}
-      <div className="flex justify-between w-full text-xs text-gray-400">
-        <span>Low</span>
-        <span>High</span>
       </div>
     </div>
   );

@@ -159,7 +159,7 @@ export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, s
             <div className="text-gray-400 text-4xl">📁</div>
             <div className="text-center">
               <div className="font-medium text-gray-700">
-                {isDragOver ? 'Drop your file here' : 'Drag and drop your file here'}
+                {isDragOver ? 'Drop your file here' : 'Drag and drop your dataset here'}
               </div>
               <div className="text-sm text-gray-500 mt-1">or click to browse files</div>
             </div>
@@ -171,8 +171,9 @@ export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, s
       {file && !isUploading && uploadStatus === 'idle' && (
         <Button 
           onClick={uploadFile}
-          className="w-full max-w-md"
+          className="w-full max-w-md cursor-pointer"
           disabled={!file}
+          variant="outline"
         >
           Upload File
         </Button>
