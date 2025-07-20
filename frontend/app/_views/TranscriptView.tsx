@@ -216,12 +216,17 @@ function ExpandableImageCard({ base64 }: { base64: string }) {
     return (
       <>
         <div
-          className="transition-transform cursor-zoom-in hover:scale-105"
-          tabIndex={0}
-          title="Hover to expand"
-          onMouseEnter={() => isDesktop && setHovered(true)}
-          onMouseLeave={() => isDesktop && setHovered(false)}
-          style={{ display: "flex", justifyContent: "center", position: "relative", zIndex: 1 }}
+        className="transition-transform cursor-zoom-in hover:scale-105"
+        tabIndex={0}
+        title="Hover to expand"
+        onMouseEnter={() => isDesktop && setHovered(true)}
+        onMouseLeave={() => isDesktop && setHovered(false)}
+        style={{
+            display: "flex",
+            justifyContent: "center",
+            position: "relative",
+            zIndex: hovered ? 1 : 'auto'  // Only raise z-index for the hovered item
+        }}
         >
           <img
             src={`data:image/png;base64,${base64}`}
@@ -232,45 +237,43 @@ function ExpandableImageCard({ base64 }: { base64: string }) {
         </div>
         {/* Centered popup on hover, only on desktop */}
         {isDesktop && hovered && (
-          <>
+        <>
             <div
-              className="fixed inset-0 bg-black bg-opacity-30 z-50 transition-opacity duration-100"
-              style={{ pointerEvents: "none" }}
-              aria-hidden="true"
+            className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-100"
+            style={{ pointerEvents: "none", zIndex: 9999 }}
+            aria-hidden="true"
             />
             <div
-              className="
-                fixed z-[99] flex items-center justify-center
-                inset-0
-                transition-opacity duration-100
-                pointer-events-none
-              "
+            className="
+                fixed flex items-center justify-center inset-0 transition-opacity duration-100 pointer-events-none
+            "
+            style={{ zIndex: 9999999 }}
             >
-              <div
+            <div
                 className="bg-white rounded-xl shadow-2xl border border-gray-100 flex items-center justify-center"
                 style={{
-                  maxWidth: "90vw",
-                  maxHeight: "80vh",
-                  padding: 24,
-                  pointerEvents: "none" // makes sure it disappears as soon as mouse leaves thumbnail
+                maxWidth: "90vw",
+                maxHeight: "80vh",
+                padding: 24,
+                pointerEvents: "none"
                 }}
-              >
+            >
                 <img
-                  src={`data:image/png;base64,${base64}`}
-                  alt="Expanded result graph"
-                  className="rounded-lg shadow-lg"
-                  style={{
+                src={`data:image/png;base64,${base64}`}
+                alt="Expanded result graph"
+                className="rounded-lg shadow-lg"
+                style={{
                     width: "auto",
-                    height: "520px", // 2x original 260px
+                    height: "520px",
                     maxHeight: "70vh",
                     maxWidth: "80vw",
                     objectFit: "contain",
-                  }}
-                  draggable={false}
+                }}
+                draggable={false}
                 />
-              </div>
             </div>
-          </>
+            </div>
+        </>
         )}
       </>
     );
