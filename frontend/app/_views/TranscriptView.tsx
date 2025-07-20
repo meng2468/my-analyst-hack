@@ -299,7 +299,7 @@ function ExpandableImageCard({ base64 }: { base64: string }) {
                   </div>
                 )}
               </div>
-              <AgentProgressView sessionId={sessionId} totalRows={20} />
+            
             </div>
       
             {/* --- Image column, shown only if an image exists and on desktop --- */}
@@ -346,6 +346,7 @@ function ExpandableImageCard({ base64 }: { base64: string }) {
               <RotateCcw size={20} />
             </Button>
           </div>
+          <AgentProgressView sessionId={sessionId} totalRows={20} />
         </div>
       )
 }
