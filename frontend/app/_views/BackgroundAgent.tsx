@@ -31,32 +31,39 @@ export default function AgentProgressView({
   return (
     <div
       className={`
-        bg-gray-50 rounded-lg border border-gray-100 shadow
-        p-6 mt-0 w-full
+        bg-white rounded-2xl border border-gray-200 shadow-lg
+        p-8 mt-5 w-full max-w-2xl mx-auto
+        flex flex-col items-center
       `}
       style={{ minHeight: 'unset', boxSizing: 'border-box' }}
     >
-      <span className="font-semibold text-sm text-gray-700 mb-2 block">
+      <span className="font-bold text-lg text-gray-700 mb-4 tracking-wide">
         Background Agent Progress
       </span>
-      <div className="w-full bg-gray-200 h-4 rounded-full overflow-hidden">
+      <div className="w-full bg-gray-200 h-8 rounded-full overflow-hidden mb-4">
         <div
-          className="bg-blue-500 h-4 rounded-full transition-all duration-300"
-          style={{ width: `${percent}%` }}
+          className="bg-blue-500 h-8 rounded-full transition-all duration-300"
+          style={{
+            width: `${percent}%`,
+            minWidth: percent > 0 && percent < 8 ? '2rem' : undefined, // ensures a sliver shows
+          }}
         />
       </div>
-      <span className="text-xs text-gray-500 font-medium mt-2 block text-center">
+      <span className="text-base text-gray-600 font-medium mt-2 block text-center">
         {max > 0 ? (
           <>
-            Enriched: {current} / {max}
+            <span className="text-blue-700 font-semibold">
+              Enriched: {current} / {max}
+            </span>
             {sheetUrl && (
               <>
-                {' '}•{' '}
+                {' '}<span className="mx-2 text-gray-400">•</span>{' '}
                 <a
                   href={sheetUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline text-blue-600 hover:text-blue-800"
+                  className="underline text-blue-600 font-semibold hover:text-blue-800"
+                  style={{ padding: '0.15rem 0.35rem' }}
                 >
                   View live sheet
                 </a>
@@ -64,7 +71,7 @@ export default function AgentProgressView({
             )}
           </>
         ) : (
-          'Enriching...'
+          <span className="italic text-gray-500">Enriching...</span>
         )}
       </span>
     </div>
