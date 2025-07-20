@@ -1,4 +1,7 @@
-export default function TranscriptView() {
+import { RotateCcw, Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+export default function TranscriptView({ sessionId, setStep }: { sessionId: string, setStep: (step: number) => void }) {
     const exampleTranscript = [
         {
             "role": "user",
@@ -9,8 +12,14 @@ export default function TranscriptView() {
             "content": "I'm doing well, thank you!"
         }
     ]
+
+    const handleDownload = () => {
+        // Dummy download functionality
+        console.log('Download clicked')
+    }
+
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center ">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-white p-4 rounded-lg relative">
             <div className="w-full h-full ">
                 {exampleTranscript.map((message, index) => (
                     <div 
@@ -24,6 +33,28 @@ export default function TranscriptView() {
                         </div>
                     </div>
                 ))}
+            </div>
+            
+            {/* Floating buttons */}
+            <div className="absolute bottom-4 right-4 flex gap-2">
+                <Button
+                    onClick={handleDownload}
+                    size="icon"
+                    variant="default"
+                    className="rounded-full cursor-pointer"
+                    title="Download"
+                >
+                    <Download size={20} />
+                </Button>
+                <Button
+                    onClick={() => setStep(0)}
+                    size="icon"
+                    variant="secondary"
+                    className="rounded-full cursor-pointer"
+                    title="Restart"
+                >
+                    <RotateCcw size={20} />
+                </Button>
             </div>
         </div>
     )

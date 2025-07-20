@@ -23,18 +23,25 @@ export default function Home() {
 
   return (
     <div className="w-full max-w-6xl mx-auto h-2/3 rounded-lg flex items-center justify-evenly p-8">
-        <div className="bg-gray-200 border-2 rounded-l-xl h-full flex flex-col items-center justify-center p-8">
-        <ConversationView sessionId={sessionId} />
-        </div>
-      <div className="h-full w-full rounded-r-xl flex flex-col items-center justify-center p-8 border-2 border-l-0 border-white">
-        {currentStep === 0 && (
-          <UploadView sessionId={sessionId} setSessionFile={setFile} />
-        )}
+      {currentStep !== 2 && (
+        <>
         {currentStep === 1 && (
-          <TranscriptView />
+          <>
+          <div className="rounded-l-xl h-full flex flex-col items-center justify-center p-8">
+            <ConversationView sessionId={sessionId} step={currentStep} setStep={setCurrentStep} />
+          </div>
+          </>
         )}
-      </div>
-      {/* <div className="text-sm text-gray-500">Session ID: {sessionId}</div> */}
+          <div className="h-full w-full flex flex-col items-center justify-center p-8 ">
+            {currentStep === 0 && (
+              <UploadView sessionId={sessionId} setSessionFile={setFile} />
+            )}
+            {currentStep === 1 && (
+              <TranscriptView sessionId={sessionId} setStep={setCurrentStep}/>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

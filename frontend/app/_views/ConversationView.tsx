@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import AudioVisualizer from '@/app/_components/audio-visualizer';
 import { LoadingSpinnerWithText } from '@/components/ui/loading-spinner';
 import { Mic, MicOff, PhoneOff, Database } from 'lucide-react';
+import { motion } from 'motion/react';
 
-export default function ConversationView({ sessionId }: { sessionId: string }) {
+export default function ConversationView({ sessionId, step, setStep }: { sessionId: string, step: number, setStep: (step: number) => void }) {
   const [status, setStatus] = useState('Disconnected');
   const [connected, setConnected] = useState(false);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -15,15 +16,17 @@ export default function ConversationView({ sessionId }: { sessionId: string }) {
   const [userStream, setUserStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
 
-  // Auto-connect when component mounts
+  // Auto-connect when step is 1
   useEffect(() => {
-    connect();
+    if (step === 1 && !connected) {
+      connect();
+    }
     
     // Cleanup on unmount
     return () => {
       disconnect();
     };
-  }, []); // Empty dependency array means this runs once on mount
+  }, [step]); // Dependency on step instead of empty array
 
   const waitForIceGatheringComplete = async (pc: RTCPeerConnection, timeoutMs = 2000) => {
     if (pc.iceGatheringState === 'complete') return;
@@ -174,89 +177,148 @@ export default function ConversationView({ sessionId }: { sessionId: string }) {
   };
 
   const handleStartWithAnotherDataset = () => {
-    // TODO: Implement dataset switching functionality
-    console.log('Start with another dataset clicked');
+    setStep(0);
   };
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
-      <div className="w-full max-w-md space-y-6">
-        
-        {/* Show loading while connecting, audio visualizer only when connected */}
-        {status === 'Connecting' ? (
-          <div className="flex justify-center mb-6">
-            <LoadingSpinnerWithText 
-              text="Connecting to conversation..." 
-              size="lg"
-              className="text-center"
-            />
-          </div>
-        ) : status === 'Connected' ? (
-          <AudioVisualizer 
-            audioElement={audioRef.current}
-            userStream={userStream}
-            className="mb-6"
+  // Skeleton component for step 0
+  const ConversationSkeleton = () => (
+    <div className="w-full h-full flex flex-col items-center justify-center space-y-6">
+      {/* Audio Visualizer Skeleton */}
+      <div className="w-full h-48 flex items-end gap-1">
+        {[...Array(8)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="w-6 bg-gray-200 rounded-sm"
+            animate={{
+              height: [20, 60, 20],
+              opacity: [0.3, 0.7, 0.3],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              delay: i * 0.1,
+              ease: "easeInOut"
+            }}
           />
-        ) : null}
+        ))}
+      </div>
+      
+      {/* Button Skeleton */}
+      <div className="w-full space-y-3">
+        <motion.div
+          className="h-10 bg-gray-200 rounded-md"
+          animate={{
+            opacity: [0.3, 0.7, 0.3],
+          }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        <motion.div
+          className="h-10 bg-gray-200 rounded-md"
+          animate={{
+            opacity: [0.3, 0.7, 0.3],
+          }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            delay: 0.5,
+            ease: "easeInOut"
+          }}
+        />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full bg-white w-full p-6 relative">
+      <div className="w-full max-w-md h-full flex flex-col space-y-6 items-center justify-center">
         
-        {status !== 'Connecting' && (
-          <div className="space-y-3">
-            {!connected ? (
-              <Button
-                onClick={handleButtonClick}
-                variant="default"
+        {/* Fixed height container for audio visualizer area */}
+        <div className="h-48 flex items-center justify-center">
+          {step === 0 ? (
+            <ConversationSkeleton />
+          ) : status === 'Connecting' ? (
+            <div className="flex justify-center">
+              <LoadingSpinnerWithText 
+                text="Connecting to conversation..." 
                 size="lg"
-                className="w-full"
+                className="text-center"
+              />
+            </div>
+          ) : status === 'Connected' ? (
+            <AudioVisualizer 
+              audioElement={audioRef.current}
+              userStream={userStream}
+              className="w-full h-full"
+            />
+          ) : (
+            <div className="flex justify-center items-center h-full">
+              <p className="text-gray-500">Ready to connect</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Fixed height container for buttons */}
+        <div className="h-32 flex flex-col justify-center items-center space-y-3">
+          {step === 0 && (
+            <div className="text-center text-gray-500">
+              <p>Upload a dataset to start your conversation</p>
+            </div>
+          )}
+          {!connected && step === 1 && (
+            <Button
+              onClick={handleButtonClick}
+              variant="default"
+              size="lg"
+              className="w-full"
+            >
+              Connect
+            </Button>
+          )}
+          {connected && step === 1 && (
+            <div className="space-y-3">
+              <Button
+                onClick={toggleMute}
+                variant={isMuted ? "destructive" : "outline"}
+                size="lg"
+                className="w-full cursor-pointer"
               >
-                Connect
+                {isMuted ? (
+                  <>
+                    <MicOff className="w-4 h-4 mr-2" />
+                    Unmute
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-4 h-4 mr-2" />
+                    Mute
+                  </>
+                )}
               </Button>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex gap-3">
-                  <Button
-                    onClick={toggleMute}
-                    variant={isMuted ? "destructive" : "outline"}
-                    size="lg"
-                    className="flex-1 cursor-pointer"
-                  >
-                    {isMuted ? (
-                      <>
-                        <MicOff className="w-4 h-4 mr-2" />
-                        Unmute
-                      </>
-                    ) : (
-                      <>
-                        <Mic className="w-4 h-4 mr-2" />
-                        Mute
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={handleButtonClick}
-                    variant="destructive"
-                    size="lg"
-                    className="flex-1 cursor-pointer"
-                  >
-                    <PhoneOff className="w-4 h-4 mr-2" />
-                    End Conversation
-                  </Button>
-                </div>
-                
-                <Button
-                  onClick={handleStartWithAnotherDataset}
-                  variant="outline"
-                  size="lg"
-                  className="w-full cursor-pointer"
-                >
-                  <Database className="w-4 h-4 mr-2" />
-                  Start with Another Dataset
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+              
+            </div>
+          )}
+        </div>
         <audio ref={audioRef} autoPlay className="hidden" />
       </div>
+      
+      {/* Floating Generate Summary button */}
+      {connected && step === 1 && (
+        <div className="absolute bottom-4 w-full flex justify-center">
+          <Button
+            onClick={() => setStep(2)}
+            variant="default"
+            className="w-48 h-12 flex items-center justify-center rounded-full cursor-pointer"
+            title="Generate Summary"
+          >
+            <Database size={20} className="mr-2" />
+            Generate Summary
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

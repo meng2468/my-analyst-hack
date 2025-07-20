@@ -164,7 +164,7 @@ export default function AudioVisualizer({ audioElement, userStream, className = 
   console.log('Visualizer state:', { isActive, userIsActive, botAmplitude, userAmplitude, hasUserStream: !!userStream });
 
   return (
-    <div className={`flex flex-col items-center gap-4 ${className}`}>
+    <div className={`overflow-hidden flex flex-col items-center gap-4 ${className} border-b-2 `}>
       
       {/* Dynamic Equalizer Bars */}
       <div className="flex items-end gap-1 h-48">
@@ -177,7 +177,7 @@ export default function AudioVisualizer({ audioElement, userStream, className = 
           return (
             <motion.div
               key={i}
-              className="w-8 rounded-t"
+              className="w-6 border-2 border-gray-200"
               style={{
                 background: isBotDominant 
                   ? `linear-gradient(to top, #3b82f6, #60a5fa)` 
