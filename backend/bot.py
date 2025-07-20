@@ -157,6 +157,8 @@ def create_execute_dataframe_code(session_id):
 
         print("code", code, flush=True)
         print("result", result, flush=True)
+        await broadcaster.push(f"data: {result}")
+        await broadcaster.push(f"code: {code}")
         await params.result_callback({"result": result})
         add_to_chat_history(session_id, "assistant", result)
 

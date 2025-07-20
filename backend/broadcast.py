@@ -5,8 +5,9 @@ class TranscriptBroadcaster:
         self.listeners = set()
 
     async def push(self, message: str):
+        escaped_message = message.replace('\n', '\\n')
         for queue in list(self.listeners):
-            await queue.put(message)
+            await queue.put(escaped_message)
 
     def add_listener(self):
         queue = asyncio.Queue()
