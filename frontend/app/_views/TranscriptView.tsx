@@ -141,7 +141,7 @@ export default function TranscriptView({
         }
         if (msg.role === 'image') {
             renderedMessages.push(
-                <ExpandableImageCard base64={msg.content}  key={`img-${i}`}  />
+                <ExpandableImageCard base64={msg.content}  key={`img-${i}`}  expandOn="click" />
             )
             continue
         }
@@ -203,30 +203,51 @@ export default function TranscriptView({
 
     const lastImageMsg = [...messages].reverse().find(m => m.role === "image");
 
-    
-function ExpandableImageCard({ base64 }: { base64: string }) {
-    const [hovered, setHovered] = useState(false);
-  
-    // Only show popup on "fine pointer" (not touch): CSS + JS media query
+
+type ExpandMode = "hover" | "click";
+
+interface ExpandableImageCardProps {
+    base64: string;
+    expandOn?: ExpandMode;
+}
+
+function ExpandableImageCard({
+    base64,
+    expandOn = "hover",
+  }: ExpandableImageCardProps) {
     const isDesktop = typeof window !== "undefined"
-      ? window.matchMedia("(hover: hover) and (pointer: fine)").matches
-      : true;
-  
-    // Optionally darken background a bit for clarity
+    ? window.matchMedia("(hover: hover) and (pointer: fine)").matches
+    : true;
+
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (expandOn !== "click" || !expanded) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [expandOn, expanded]);
+
+  // Use container hover state for "hover" mode
+  if (expandOn === "hover" && isDesktop) {
     return (
-      <>
-        <div
-        className="transition-transform cursor-zoom-in hover:scale-105"
+      <div
+        onMouseEnter={() => setExpanded(true)}
+        onMouseLeave={() => setExpanded(false)}
+        style={{ display: "inline-block", position: "relative" }}
         tabIndex={0}
         title="Hover to expand"
-        onMouseEnter={() => isDesktop && setHovered(true)}
-        onMouseLeave={() => isDesktop && setHovered(false)}
-        style={{
+      >
+        <div
+          className="transition-transform cursor-zoom-in hover:scale-105"
+          style={{
             display: "flex",
             justifyContent: "center",
             position: "relative",
-            zIndex: hovered ? 1 : 'auto'  // Only raise z-index for the hovered item
-        }}
+            zIndex: expanded ? 1 : "auto",
+          }}
         >
           <img
             src={`data:image/png;base64,${base64}`}
@@ -235,49 +256,115 @@ function ExpandableImageCard({ base64 }: { base64: string }) {
             draggable={false}
           />
         </div>
-        {/* Centered popup on hover, only on desktop */}
-        {isDesktop && hovered && (
-        <>
+        {expanded && (
+          <>
             <div
-            className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-100"
-            style={{ pointerEvents: "none", zIndex: 9999 }}
-            aria-hidden="true"
+              className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-100"
+              style={{ pointerEvents: "none", zIndex: 9999 }}
+              aria-hidden="true"
             />
             <div
-            className="
+              className="
                 fixed flex items-center justify-center inset-0 transition-opacity duration-100 pointer-events-none
-            "
-            style={{ zIndex: 9999999 }}
+              "
+              style={{ zIndex: 9999999 }}
             >
-            <div
+              <div
                 className="bg-white rounded-xl shadow-2xl border border-gray-100 flex items-center justify-center"
                 style={{
-                maxWidth: "90vw",
-                maxHeight: "80vh",
-                padding: 24,
-                pointerEvents: "none"
+                  maxWidth: "90vw",
+                  maxHeight: "80vh",
+                  padding: 24,
+                  pointerEvents: "none",
                 }}
-            >
+              >
                 <img
-                src={`data:image/png;base64,${base64}`}
-                alt="Expanded result graph"
-                className="rounded-lg shadow-lg"
-                style={{
+                  src={`data:image/png;base64,${base64}`}
+                  alt="Expanded result graph"
+                  className="rounded-lg shadow-lg"
+                  style={{
                     width: "auto",
                     height: "520px",
                     maxHeight: "70vh",
                     maxWidth: "80vw",
                     objectFit: "contain",
-                }}
-                draggable={false}
+                  }}
+                  draggable={false}
                 />
+              </div>
             </div>
-            </div>
-        </>
+          </>
         )}
-      </>
+      </div>
     );
   }
+
+  // "Click" mode (or on non-desktop): use previous version
+  return (
+    <>
+      <div
+        className="transition-transform cursor-zoom-in hover:scale-105"
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          position: "relative",
+          zIndex: expanded ? 1 : "auto",
+        }}
+        onClick={() => setExpanded(true)}
+        tabIndex={0}
+        title="Click to expand"
+        role="button"
+      >
+        <img
+          src={`data:image/png;base64,${base64}`}
+          alt="Result graph"
+          className="max-h-[260px] max-w-full rounded shadow-lg"
+          draggable={false}
+        />
+      </div>
+      {expanded && isDesktop && (
+        <>
+          <div
+            className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-100"
+            style={{ zIndex: 9999 }}
+            aria-hidden="true"
+            onClick={() => setExpanded(false)}
+          />
+          <div
+            className="fixed flex items-center justify-center inset-0 transition-opacity duration-100"
+            style={{ zIndex: 9999999, pointerEvents: "auto" }}
+            onClick={() => setExpanded(false)}
+          >
+            <div
+              className="bg-white rounded-xl shadow-2xl border border-gray-100 flex items-center justify-center"
+              style={{
+                maxWidth: "90vw",
+                maxHeight: "80vh",
+                padding: 24,
+                pointerEvents: "auto",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <img
+                src={`data:image/png;base64,${base64}`}
+                alt="Expanded result graph"
+                className="rounded-lg shadow-lg"
+                style={{
+                  width: "auto",
+                  height: "520px",
+                  maxHeight: "70vh",
+                  maxWidth: "80vw",
+                  objectFit: "contain",
+                }}
+                draggable={false}
+              />
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-white p-4 rounded-lg relative">
           <div className="flex w-full max-w-4xl gap-6 mx-auto">
@@ -313,7 +400,7 @@ function ExpandableImageCard({ base64 }: { base64: string }) {
                     <span className="text-gray-500 text-xs font-semibold mb-2 tracking-wide">
                     Latest Graph/Chart
                     </span>
-                    <ExpandableImageCard base64={lastImageMsg.content} />
+                    <ExpandableImageCard base64={lastImageMsg.content} expandOn="hover" />
                 </div>
                 </div>
             </aside>
