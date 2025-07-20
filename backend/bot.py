@@ -23,6 +23,7 @@ from pipecat.services.llm_service import FunctionCallParams
 import contextvars
 from contextlib import AsyncExitStack
 from openai import OpenAI
+import sheets
 
 load_dotenv(override=True)
 
@@ -78,46 +79,73 @@ async def summarize_chat_history(session_id: str, report_url: str):
 
 # Create a function factory that captures the session_id
 def create_execute_dataframe_code(session_id):
-    async def execute_dataframe_code(params: FunctionCallParams, code: str):
-        print(f"Using session_id: {session_id}", flush=True)
+    async def execute_dataframe_code(params: FunctionCallParams, code: str,
+                                     anaylsis_title: str = "", upload_to_google_docs: bool=False):
+        print(f"execute_dataframe_code, session_id: {session_id} with {upload_to_google_docs}, code {code}", flush=True)
         
         # Load session-specific dataframe
         try:
-            # Try to load from data folder first (for uploaded files)
             df = pd.read_csv(f"data/{session_id}.csv")
             print(f"Loaded dataset from data/{session_id}.csv", flush=True)
         except Exception as e:
             print(f"no data found for session id {session_id} in data folder. error {e}", flush=True)
             try:
-                # Fallback to current directory
                 df = pd.read_csv(f"{session_id}.csv")
                 print(f"Loaded dataset from {session_id}.csv", flush=True)
             except Exception as e2:
                 print(f"no data found for session id {session_id} in current directory. error {e2}", flush=True)
-                # Final fallback to default dataset
                 df = pd.read_csv("airline.csv")
                 print("Using default airline dataset", flush=True)
 
         safe_locals = {"df": df, "pd": pd}
         output = io.StringIO()
+        result_to_upload = None
 
         try:
             try:
                 compiled = compile(code, "<string>", "eval")
                 value = eval(compiled, {}, safe_locals)
                 result = str(value)
+                if isinstance(value, pd.DataFrame):
+                    result_to_upload = value
             except SyntaxError:
+                # Snapshot of variables before exec
+                before_vars = set(safe_locals.keys())
                 with contextlib.redirect_stdout(output):
                     exec(code, {}, safe_locals)
                 result = output.getvalue() or "Code executed, but did not return or print anything."
+                # Snapshot after exec
+                after_vars = set(safe_locals.keys())
+
+                # Find new or modified variables that are DataFrames
+                new_vars = after_vars - before_vars
+                df_candidates = [safe_locals[k] for k in new_vars if isinstance(safe_locals[k], pd.DataFrame)]
+                if not df_candidates:
+                    # Also include DataFrames whose id changed
+                    df_candidates = [
+                        safe_locals[k] for k in after_vars
+                        if isinstance(safe_locals[k], pd.DataFrame) and 
+                        (k not in before_vars or id(safe_locals[k]) != id(safe_locals.get(k)))
+                    ]
+                if df_candidates:
+                    # Pick the last one created/modified
+                    result_to_upload = df_candidates[-1]
         except Exception as e:
             result = f"Error during execution: {e}"
+
+        if upload_to_google_docs and result_to_upload is not None:
+            try:
+                sheets.create_and_upload_df(result_to_upload, anaylsis_title)
+                result += "\n\nDataFrame uploaded to Google Sheets."
+            except Exception as upload_err:
+                print("upload_error", upload_err, flush=True)
+                result += f"\n\nFailed to upload to Google Sheets: {upload_err}"
 
         print("code", code, flush=True)
         print("result", result, flush=True)
         await params.result_callback({"result": result})
         add_to_chat_history(session_id, "assistant", result)
-    
+
     return execute_dataframe_code
 
 def get_df_column_info(session_id):
@@ -139,6 +167,7 @@ SYSTEM_PROMPT = (
     "with the appropriate Python code to analyze or manipulate `df`. "
     "Always provide Python code as a string in the tool call argument named 'code'. Also describe errors when something went wrong. "
     "Your output is directly transferred to text-to-speech, so make a natural, concise and to the point summary to the user question that's easy to understand just by listening to it."
+    "You can also upload intermediate results to google sheets, if the user chooses to, where a new file is created. for this, your code needs to output a pd df that is passed to google sheets and also upadting flag upload_to_google_docs"
 )
 
 
