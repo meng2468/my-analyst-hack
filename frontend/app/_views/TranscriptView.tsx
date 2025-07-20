@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useCallback,useRef } from 'react'
 import { RotateCcw, Download, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import AgentProgressView from './BackgroundAgent'
@@ -34,14 +34,11 @@ function renderWithLineBreaksFromString(text: string) {
         idx < arr.length - 1 ? [line, <br key={idx} />] : line
     )
 }
-
 function CodeWithResult({ code, data }: { code: string; data: string }) {
     const [open, setOpen] = useState(false)
-    const contentRef = useRef<HTMLDivElement>(null)
   
     return (
       <div className="my-2">
-        {/* Only show card background when open */}
         {!open ? (
           <button
             onClick={() => setOpen(true)}
@@ -60,19 +57,7 @@ function CodeWithResult({ code, data }: { code: string; data: string }) {
               <span>Code & Result</span>
               <span className="ml-auto text-gray-400">▲</span>
             </button>
-            {/* Animated content */}
-            <div
-              ref={contentRef}
-              className="transition-all duration-300 ease-in-out overflow-hidden"
-              style={{
-                maxHeight: open
-                  ? contentRef.current
-                    ? contentRef.current.scrollHeight + 'px'
-                    : '600px'
-                  : '0px',
-                opacity: open ? 1 : 0,
-              }}
-            >
+            <div>
               <div className="bg-gray-900 text-gray-100 p-3 font-mono text-xs border-b border-gray-800">
                 <span className="uppercase text-[0.82em] tracking-wider text-gray-400 font-bold mb-2 block">Code</span>
                 <pre className="overflow-x-auto whitespace-pre-wrap">
@@ -156,7 +141,7 @@ export default function TranscriptView({
         }
         if (msg.role === 'image') {
             renderedMessages.push(
-                <ImageCard base64={msg.content} key={`img-${i}`} />
+                <ExpandableImageCard base64={msg.content}  key={`img-${i}`}  expandOn="click" />
             )
             continue
         }
@@ -204,52 +189,242 @@ export default function TranscriptView({
 
     const handleGenerateSummary = () => setStep(3)
 
-    return (
-        <div className="w-full h-[520px] flex flex-col items-center justify-center border bg-white/15 backdrop-blur-lg border-white  rounded-lg relative">
-            <div className="w-full flex-col items-start justify-center overflow-y-auto">
-                {messages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full w-full text-gray-400">
-                        Waiting for transcript...
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-6 p-4 pr-6">
-                        {renderedMessages}
-                        <div ref={transcriptEndRef}></div>
-                    </div>
-                )}
-            </div>
-            <AgentProgressView sessionId={sessionId} totalRows={20} />
+    const lastImageMsg = [...messages].reverse().find(m => m.role === "image");
 
-            {/* Floating Buttons */}
-            <div className="absolute bottom-4 right-4 flex gap-2">
-                <Button
-                    onClick={handleDownload}
-                    size="icon"
-                    variant="default"
-                    className="rounded-full cursor-pointer"
-                    title="Download"
-                >
-                    <Download size={20} />
-                </Button>
-                <Button
-                    onClick={handleGenerateSummary}
-                    size="icon"
-                    variant="default"
-                    className="rounded-full cursor-pointer"
-                    title="Generate Summary"
-                >
-                    <Database size={20} />
-                </Button>
-                <Button
-                    onClick={() => setStep(0)}
-                    size="icon"
-                    variant="secondary"
-                    className="rounded-full cursor-pointer"
-                    title="Restart"
-                >
-                    <RotateCcw size={20} />
-                </Button>
-            </div>
+
+type ExpandMode = "hover" | "click";
+
+interface ExpandableImageCardProps {
+    base64: string;
+    expandOn?: ExpandMode;
+}
+
+function ExpandableImageCard({
+    base64,
+    expandOn = "hover",
+  }: ExpandableImageCardProps) {
+    const isDesktop = typeof window !== "undefined"
+    ? window.matchMedia("(hover: hover) and (pointer: fine)").matches
+    : true;
+
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (expandOn !== "click" || !expanded) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [expandOn, expanded]);
+
+  // Use container hover state for "hover" mode
+  if (expandOn === "hover" && isDesktop) {
+    return (
+      <div
+        onMouseEnter={() => setExpanded(true)}
+        onMouseLeave={() => setExpanded(false)}
+        style={{ display: "inline-block", position: "relative" }}
+        tabIndex={0}
+        title="Hover to expand"
+      >
+        <div
+          className="transition-transform cursor-zoom-in hover:scale-105"
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            position: "relative",
+            zIndex: expanded ? 1 : "auto",
+          }}
+        >
+          <img
+            src={`data:image/png;base64,${base64}`}
+            alt="Result graph"
+            className="max-h-[260px] max-w-full rounded shadow-lg"
+            draggable={false}
+          />
         </div>
-    )
+        {expanded && (
+          <>
+            <div
+              className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-100"
+              style={{ pointerEvents: "none", zIndex: 9999 }}
+              aria-hidden="true"
+            />
+            <div
+              className="
+                fixed flex items-center justify-center inset-0 transition-opacity duration-100 pointer-events-none
+              "
+              style={{ zIndex: 9999999 }}
+            >
+              <div
+                className="bg-white rounded-xl shadow-2xl border border-gray-100 flex items-center justify-center"
+                style={{
+                  maxWidth: "90vw",
+                  maxHeight: "80vh",
+                  padding: 24,
+                  pointerEvents: "none",
+                }}
+              >
+                <img
+                  src={`data:image/png;base64,${base64}`}
+                  alt="Expanded result graph"
+                  className="rounded-lg shadow-lg"
+                  style={{
+                    width: "auto",
+                    height: "520px",
+                    maxHeight: "70vh",
+                    maxWidth: "80vw",
+                    objectFit: "contain",
+                  }}
+                  draggable={false}
+                />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // "Click" mode (or on non-desktop): use previous version
+  return (
+    <>
+      <div
+        className="transition-transform cursor-zoom-in hover:scale-105"
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          position: "relative",
+          zIndex: expanded ? 1 : "auto",
+        }}
+        onClick={() => setExpanded(true)}
+        tabIndex={0}
+        title="Click to expand"
+        role="button"
+      >
+        <img
+          src={`data:image/png;base64,${base64}`}
+          alt="Result graph"
+          className="max-h-[260px] max-w-full rounded shadow-lg"
+          draggable={false}
+        />
+      </div>
+      {expanded && isDesktop && (
+        <>
+          <div
+            className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-100"
+            style={{ zIndex: 9999 }}
+            aria-hidden="true"
+            onClick={() => setExpanded(false)}
+          />
+          <div
+            className="fixed flex items-center justify-center inset-0 transition-opacity duration-100"
+            style={{ zIndex: 9999999, pointerEvents: "auto" }}
+            onClick={() => setExpanded(false)}
+          >
+            <div
+              className="bg-white rounded-xl shadow-2xl border border-gray-100 flex items-center justify-center"
+              style={{
+                maxWidth: "90vw",
+                maxHeight: "80vh",
+                padding: 24,
+                pointerEvents: "auto",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <img
+                src={`data:image/png;base64,${base64}`}
+                alt="Expanded result graph"
+                className="rounded-lg shadow-lg"
+                style={{
+                  width: "auto",
+                  height: "520px",
+                  maxHeight: "70vh",
+                  maxWidth: "80vw",
+                  objectFit: "contain",
+                }}
+                draggable={false}
+              />
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+    return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-white p-4 rounded-lg relative">
+          <div className="flex w-full max-w-4xl gap-6 mx-auto">
+            {/* Transcript area */}
+            <div className="flex-1">
+              <div
+                className="
+                  bg-gray-50 rounded-lg border border-gray-100 shadow
+                  p-6 mb-16 overflow-y-auto max-h-[430px]
+                  transition-all
+                "
+                style={{ minHeight: '220px' }}
+              >
+                {messages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full w-full text-gray-400">
+                    Waiting for transcript...
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {renderedMessages}
+                    <div ref={transcriptEndRef}></div>
+                  </div>
+                )}
+              </div>
+            
+            </div>
+      
+            {/* --- Image column, shown only if an image exists and on desktop --- */}
+            {lastImageMsg && (
+            <aside className="hidden md:flex flex-col items-center mt-2 w-[320px] min-w-[240px] max-w-[340px]">
+                <div className="sticky top-8 w-full">
+                <div className="bg-white shadow-lg rounded-xl border border-gray-100 p-4 flex flex-col items-center">
+                    <span className="text-gray-500 text-xs font-semibold mb-2 tracking-wide">
+                    Latest Graph/Chart
+                    </span>
+                    <ExpandableImageCard base64={lastImageMsg.content} expandOn="hover" />
+                </div>
+                </div>
+            </aside>
+            )}
+          </div>
+          {/* Floating Buttons (unchanged) */}
+          <div className="absolute bottom-4 right-4 flex gap-2">
+            <Button
+              onClick={handleDownload}
+              size="icon"
+              variant="default"
+              className="rounded-full cursor-pointer"
+              title="Download"
+            >
+              <Download size={20} />
+            </Button>
+            <Button
+              onClick={handleGenerateSummary}
+              size="icon"
+              variant="default"
+              className="rounded-full cursor-pointer"
+              title="Generate Summary"
+            >
+              <Database size={20} />
+            </Button>
+            <Button
+              onClick={() => setStep(0)}
+              size="icon"
+              variant="secondary"
+              className="rounded-full cursor-pointer"
+              title="Restart"
+            >
+              <RotateCcw size={20} />
+            </Button>
+          </div>
+          <AgentProgressView sessionId={sessionId} totalRows={20} />
+        </div>
+      )
 }
