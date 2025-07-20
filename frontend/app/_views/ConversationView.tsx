@@ -269,7 +269,7 @@ export default function ConversationView({
 
   return (
     <div className="flex flex-col items-center justify-center bg-white/15 backdrop-blur-lg border border-white w-full px-12 p-6 rounded-lg relative">
-      <div className="h-[470px] w-[240px] flex flex-col space-y-6 items-center justify-center">
+      <div className="h-[730px] w-[240px] flex flex-col space-y-6 items-center justify-center">
         {/* Fixed height container for audio visualizer area */}
         <div className="h-36 flex items-center justify-center">
           {step === 0 ? (

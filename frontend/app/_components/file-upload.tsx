@@ -98,7 +98,7 @@ export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, s
     <div className="w-full h-full flex flex-col items-center">
       {/* Drag and Drop Area */}
       <div
-        className={`w-full h-[520px] border-2 border-dashed rounded-lg flex bg-white/15 backdrop-blur-sm flex-col items-center justify-center gap-4 transition-colors relative ${
+        className={`w-full h-[780px] border-2 border-dashed rounded-lg flex bg-white/15 backdrop-blur-sm flex-col items-center justify-center gap-4 transition-colors relative ${
           isUploading ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
         } ${
           isDragOver 
