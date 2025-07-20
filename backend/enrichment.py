@@ -118,7 +118,8 @@ def enrich_dataset(
             sheet_name=sheet_name,
             rows=[ordered_row]
         )
-        log_msg = f"Enriched row {idx+1}/{len(pd_df)}: {context} => {llm_result[col_name]}"
+        sheet_url = create_resp.get('spreadsheetUrl')
+        log_msg = f"Enriched row {idx+1}/{len(pd_df)}. View: {sheet_url}"
         asyncio.run(enrichment_broadcaster.push(log_msg, session_id=session_id))
 
     return {

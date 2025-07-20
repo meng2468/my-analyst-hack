@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { RotateCcw, Download, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import AgentProgressView from './BackgroundAgent'
 
 // Parses: "role: message"
 function parseLinesToMessages(lines: string[]) {
@@ -132,6 +133,8 @@ export default function TranscriptView({
           </div>
         )}
       </div>
+      <AgentProgressView sessionId={sessionId} totalRows={20} />
+
       {/* Floating Buttons */}
       <div className="absolute bottom-4 right-4 flex gap-2">
         <Button
