@@ -26,7 +26,9 @@ from contextlib import AsyncExitStack
 from openai import OpenAI
 import sheets
 import enrichment
-
+import matplotlib.pyplot as plt
+import base64
+import io
 load_dotenv(override=True)
 
 client = OpenAI()
@@ -126,6 +128,7 @@ def create_execute_dataframe_code(session_id):
             result = str(value)
             if upload_to_google_docs and isinstance(value, pd.DataFrame):
                 result_to_upload = value
+
         except SyntaxError:
             before_vars = set(safe_locals.keys())
             with contextlib.redirect_stdout(output):
@@ -147,6 +150,16 @@ def create_execute_dataframe_code(session_id):
                     # Pick the last one created/modified
                     result_to_upload = df_candidates[-1]
 
+        image_path = 'analysis.png'
+        try:
+            if os.path.exists(image_path):
+                with open(image_path, 'rb') as f:
+                    image_base64 = base64.b64encode(f.read()).decode('utf-8')
+                os.remove(image_path)
+                await broadcaster.push(f"image: {image_base64}")
+        except:
+            pass
+            
         if upload_to_google_docs and result_to_upload is not None:
             try:
                 sheets.create_and_upload_df(result_to_upload, anaylsis_title)
@@ -157,8 +170,8 @@ def create_execute_dataframe_code(session_id):
 
         print("code", code, flush=True)
         print("result", result, flush=True)
-        await broadcaster.push(f"data: {result}")
         await broadcaster.push(f"code: {code}")
+        await broadcaster.push(f"data: {result}")
         await params.result_callback({"result": result})
         add_to_chat_history(session_id, "assistant", result)
 
@@ -185,6 +198,8 @@ SYSTEM_PROMPT = (
     "Your output is directly transferred to text-to-speech, so make a natural, concise and to the point summary to the user question that's easy to understand just by listening to it."
     "You can also upload intermediate results to google sheets, if the user chooses to, where a new file is created. for this, your code needs to output a pd df that is passed to google sheets and also upadting flag upload_to_google_docs"
     "The user can also ask to enrich (e.g. classify the dataset). for this use enrich_dataset tool. it needs classification_prompt of what to look for and possible_values as list of str"
+    "code execution, if helpfull, can export ONE image as analysis.png, which you save in py code under current directory and is then streamed automatically to user."
+    "you should add matplotplib rendering per default to most code for a good UX. you do NOT say that you exported or vized it. YOU RESPOND DIRECTLY TO USER QUESTION WITH concise insights in text that are directly converted to audio "
 )
 
 
