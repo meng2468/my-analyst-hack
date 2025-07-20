@@ -199,7 +199,9 @@ SYSTEM_PROMPT = (
     "You can also upload intermediate results to google sheets, if the user chooses to, where a new file is created. for this, your code needs to output a pd df that is passed to google sheets and also upadting flag upload_to_google_docs"
     "The user can also ask to enrich (e.g. classify the dataset). for this use enrich_dataset tool. it needs classification_prompt of what to look for and possible_values as list of str"
     "code execution, if helpfull, can export ONE image as analysis.png, which you save in py code under current directory and is then streamed automatically to user."
-    "you should add matplotplib rendering per default to most code for a good UX. you do NOT say that you exported or vized it. YOU RESPOND DIRECTLY TO USER QUESTION WITH concise insights in text that are directly converted to audio "
+    "you should add matplotplib rendering per default to most code for a good UX. you do NOT say that you exported or vized it."
+    "YOU RESPOND DIRECTLY TO USER QUESTION WITH concise insights in text that are directly converted to audio so user can understand results withoput looking at chart "
+    "DO NOT FOCUSE TOO MUCH ON THE CHART AGAIN MAKE THE CODE OUTPUT VALUABLE DATA IN PRINT AND USE THAT DATA, the user doenst see it"
 )
 
 
