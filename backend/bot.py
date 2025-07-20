@@ -17,7 +17,8 @@ from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 from pipecat.transcriptions.language import Language
 from pipecat.services.openai.stt import OpenAISTTService
-
+from pipecat.processors.transcript_processor import TranscriptProcessor
+from broadcast import broadcaster
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.llm_service import FunctionCallParams
 import contextvars
@@ -192,6 +193,7 @@ SYSTEM_PROMPT = (
 INTRO_MESSAGE = (
     "Hello! I am your data analyst"
 )
+transcript = TranscriptProcessor()
 
 async def run_bot(webrtc_connection, session_id=None):
     pipecat_transport = SmallWebRTCTransport(
@@ -238,10 +240,12 @@ async def run_bot(webrtc_connection, session_id=None):
     pipeline = Pipeline([
         pipecat_transport.input(),
         sst,
+        transcript.user(),
         context_aggregator.user(),
         llm,
         tts,
         pipecat_transport.output(),
+        transcript.assistant(),
         context_aggregator.assistant(),
     ])
 
@@ -287,5 +291,13 @@ async def run_bot(webrtc_connection, session_id=None):
         logger.info("Pipecat Client disconnected")
         await task.cancel()
 
+
+    @transcript.event_handler("on_transcript_update")
+    async def handle_update(processor, frame):
+        for message in frame.messages:
+            line = f"{message.role}: {message.content}"
+            print(f"on_transcript_update {line}")
+            await broadcaster.push(line)
+            
     runner = PipelineRunner(handle_sigint=False)
     await runner.run(task)

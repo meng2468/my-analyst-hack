@@ -22,6 +22,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 import os
 
+from fastapi import Request
+from fastapi.responses import StreamingResponse
+from broadcast import broadcaster  # make sure to import
 
 class SummarizeRequest(BaseModel):
     session_id: str
@@ -65,6 +68,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/api/transcript-events")
+async def transcript_events(request: Request):
+    """SSE stream for transcript updates."""
+    queue = broadcaster.add_listener()
+
+    # Generator for StreamingResponse
+    async def event_generator():
+        try:
+            while True:
+                # End stream if client disconnects
+                if await request.is_disconnected():
+                    break
+                message = await queue.get()
+                yield f"data: {message}\n\n"
+        finally:
+            broadcaster.remove_listener(queue)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 @app.post("/api/upload-csv")
 async def upload_csv(session_id: str, file: UploadFile = File(...)):
     if not file.filename.endswith(".csv"):
@@ -92,7 +116,7 @@ async def report_url(request: SummarizeRequest):
     report_url = f"http://localhost:7860/reports/{pdf_name}"
     summary = await summarize_chat_history(request.session_id, report_url)
     print("summary", summary, flush=True)
-    report.generate_pdf_report(f"{request.session_id}.csv", pdf_path, summary)
+    report.generate_pdf_report(f"data/{request.session_id}.csv", pdf_path, summary)
     
     mail.send_mail(
         request.email, 
