@@ -164,11 +164,11 @@
             summarizeBtn.textContent = "Summarizing...";
             summaryResult.textContent = "";
             try {
-                const resp = await fetch("/api/summarize", {
+                const resp = await fetch("/api/report", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        session_id: "airline", // Use your actual session id if needed
+                        session_id: "airline",
                         email,
                     })
                 });

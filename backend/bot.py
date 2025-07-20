@@ -24,6 +24,7 @@ import contextvars
 from contextlib import AsyncExitStack
 from openai import OpenAI
 import sheets
+import enrichment
 
 load_dotenv(override=True)
 
@@ -76,6 +77,22 @@ async def summarize_chat_history(session_id: str, report_url: str):
         summary = f"Error generating summary: {e}"
 
     return summary
+
+def enrich_dataset(session_id):
+    async def _enrich_dataset(params: FunctionCallParams, classification_prompt:str,
+                             output_col_name: str,
+                             document_title: str,
+                             possible_values: list[str]):
+        df = pd.read_csv(f"data/{session_id}.csv")
+        future = enrichment.run_enrichment_in_background(
+            pd_df=df,
+            prompt=classification_prompt,
+            col_name=output_col_name,
+            possible_values=possible_values,
+            title=document_title
+        )
+        await params.result_callback({"result": "Enrichment initiated, and deferred to background task"})
+    return _enrich_dataset
 
 # Create a function factory that captures the session_id
 def create_execute_dataframe_code(session_id):
@@ -168,6 +185,7 @@ SYSTEM_PROMPT = (
     "Always provide Python code as a string in the tool call argument named 'code'. Also describe errors when something went wrong. "
     "Your output is directly transferred to text-to-speech, so make a natural, concise and to the point summary to the user question that's easy to understand just by listening to it."
     "You can also upload intermediate results to google sheets, if the user chooses to, where a new file is created. for this, your code needs to output a pd df that is passed to google sheets and also upadting flag upload_to_google_docs"
+    "The user can also ask to enrich (e.g. classify the dataset). for this use enrich_dataset tool. it needs classification_prompt of what to look for and possible_values as list of str"
 )
 
 
@@ -188,13 +206,14 @@ async def run_bot(webrtc_connection, session_id=None):
 
     # Create the execute_dataframe_code function with the session_id
     execute_dataframe_code_func = create_execute_dataframe_code(session_id)
-
+    execute_enrich_dataset = enrich_dataset(session_id)
     llm = OpenAILLMService(
         api_key=os.getenv("OPENAI_API_KEY"),
         system_instruction=SYSTEM_PROMPT,
-        tools=ToolsSchema(standard_tools=[execute_dataframe_code_func]),
+        tools=ToolsSchema(standard_tools=[execute_dataframe_code_func, execute_enrich_dataset]),
     )
     llm.register_direct_function(execute_dataframe_code_func)
+    llm.register_direct_function(execute_enrich_dataset)
 
     tts = ElevenLabsTTSService(
         api_key=os.getenv("ELEVENLABS_API_KEY"),
@@ -213,7 +232,7 @@ async def run_bot(webrtc_connection, session_id=None):
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "system", "content": column_info_msg},
     ]
-    context = OpenAILLMContext(messages, tools=ToolsSchema(standard_tools=[execute_dataframe_code_func]))
+    context = OpenAILLMContext(messages, tools=ToolsSchema(standard_tools=[execute_dataframe_code_func, execute_enrich_dataset]))
     context_aggregator = llm.create_context_aggregator(context)
 
     pipeline = Pipeline([

@@ -81,3 +81,41 @@ def create_and_upload_df(df, title="New Sheet", sheet_name="Sheet1", linked_acco
         "spreadsheetUrl": spreadsheet_url,
         "updateResult": update_result
     }
+
+def append_rows_to_sheet(spreadsheet_id, sheet_name, rows, linked_account_owner_id="start"):
+    """
+    Append rows to a Google Sheet.
+
+    Args:
+        spreadsheet_id (str): The ID of the spreadsheet.
+        sheet_name (str): The name of the sheet/tab to append to.
+        rows (list of lists): Data rows to append.
+        linked_account_owner_id (str): Owner ID for ACI.
+
+    Returns:
+        dict: The result of the append operation.
+    """
+    # Determine the range (append requires just sheet name + "!A1", but Sheets API handles the placement)
+    range_a1 = f"{sheet_name}!A1"
+
+    append_result = client.functions.execute(
+        function_name="GOOGLE_SHEETS__VALUES_APPEND",
+        function_arguments={
+            "path": {
+                "spreadsheetId": spreadsheet_id,
+                "range": range_a1
+            },
+            "query": {
+                "valueInputOption": "RAW",
+                "insertDataOption": "INSERT_ROWS"
+            },
+            "body": {
+                "range": range_a1,
+                "majorDimension": "ROWS",
+                "values": rows
+            }
+        },
+        linked_account_owner_id=linked_account_owner_id
+    )
+
+    return append_result
