@@ -52,7 +52,7 @@ async def summarize_chat_history(session_id: str, report_url: str):
     
     summarization_prompt = (
         "You will receive a transcript of a conversation between a user and an AI assistant engaged in data analysis. "
-        f"Your output should be a E-Mail-Body with greetings and conclusion and the main key, concise and valuable insights. It must be a business report keep it professional with key insights like you are a data analyst."
+        f"Your output should be a E-Mail-Body with greetings and conclusion by greetings your Voice2Insights data chatbot and the main key, concise and valuable insights. It must be a business report keep it professional with key insights like you are a data analyst."
     )
     
     # Build the LLM context

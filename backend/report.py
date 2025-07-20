@@ -45,6 +45,26 @@ def fit_col_widths(df, max_width=MAX_TABLE_WIDTH):
     base_width = max_width / n
     return [base_width] * n
 
+def prepare_summary(summary, styles):
+    # Replace newlines with <br/> for proper line breaks in PDF
+    summary_with_breaks = summary.replace('\n', '<br/>')
+    styles.add(ParagraphStyle(
+        name='SummaryBox',
+        fontName='Helvetica',
+        fontSize=10,
+        textColor=colors.HexColor('#07354f'),
+        backColor=colors.HexColor('#eef3fb'),
+        borderColor=colors.HexColor('#bdd8e6'),
+        borderWidth=1,
+        borderPadding=8,
+        leading=14,
+        leftIndent=0,  # no indent - full width
+        rightIndent=0,
+        spaceBefore=10,
+        spaceAfter=12,
+    ))
+    return Paragraph(summary_with_breaks, styles['SummaryBox'])
+
 def generate_pdf_report(csv_filename, pdf_filename, summary:str):
     df = pd.read_csv(csv_filename)
     dataset_name = os.path.basename(csv_filename)
@@ -64,29 +84,14 @@ def generate_pdf_report(csv_filename, pdf_filename, summary:str):
     story.append(Paragraph("Data Analysis Report", styles['MyHeading']))
     story.append(Paragraph(f"Dataset: <b>{dataset_name}</b>", styles['MySubtitle']))
 
-    # --------- SUMMARY (pretty printed) ---------
-    # Add a new style for summary box
-    styles.add(ParagraphStyle(
-        name='SummaryBox',
-        fontName='Helvetica',
-        fontSize=10,
-        textColor=colors.HexColor('#07354f'),
-        backColor=colors.HexColor('#eef3fb'),
-        borderColor=colors.HexColor('#bdd8e6'),
-        borderWidth=1,
-        borderPadding=8,
-        leading=14,
-        leftIndent=0,  # no indent - full width
-        rightIndent=0,
-        spaceBefore=10,
-        spaceAfter=12,
-    ))
-    story.append(Paragraph(summary, styles['SummaryBox']))
-
-
     # General info
     story.append(Paragraph(f"Rows: <b>{df.shape[0]}</b>, Columns: <b>{df.shape[1]}</b>", styles['MyNorm']))
     story.append(Spacer(1, 8))
+
+    story.append(prepare_summary(summary, styles))
+    story.append(PageBreak())
+
+
 
     # --------- GRAPHS AT THE TOP ---------
     story.append(Paragraph("Key Distributions", styles['MySection']))
@@ -140,5 +145,23 @@ def generate_pdf_report(csv_filename, pdf_filename, summary:str):
     doc.build(story)
 
 if __name__ == '__main__':
-    generate_pdf_report('airline.csv', 'airline_report.pdf')
+    generate_pdf_report('airline.csv', 'airline_report.pdf', """Dear Team,
+
+Please find below the key insights from the customer satisfaction dataset analysis:
+
+- Dataset covers 129,880 records with attributes including satisfaction level, customer type, age, online boarding, and delays.
+- Customer Satisfaction: Approximately 54.7% (71,087) of customers are satisfied, while the remainder are dissatisfied.
+- Customer Type: Majority (81.7%, 106,100) are loyal customers, indicating a strong base of repeat clients.
+- Age Distribution: Customers range from 7 to 85 years old, with a mean age of 39.4 years and median of 40 years.
+- Online Boarding: Scores range from 0 to 5, with an average rating of 3.35 and a median of 4, suggesting moderate to high usage/satisfaction.
+- Departure Delay: The average delay is roughly 14.7 minutes, though it varies widely (up to over 1,500 minutes), highlighting occasional significant delays.
+- Arrival Delay: Similarly, arrival delays average 15.1 minutes but can be extensively longer, indicating punctuality issues exist but are not the norm.
+
+These insights can guide customer service improvements, especially focusing on reducing delay times and enhancing experience for newer customers.
+
+Please let me know if further detailed analysis or specific segment breakdowns are required.
+
+Best regards,  
+[Your Name]  
+Data Analyst""")
     print("PDF report generated: airline_report.pdf")
