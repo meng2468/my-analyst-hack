@@ -4,6 +4,7 @@
 
 yDE (Your Data Expert) is an innovative voice agent platform that transforms data analysis through natural conversation. Upload your datasets and have intelligent conversations with an AI analyst that can understand, analyze, and provide insights through voice interaction.
 
+![yDE Architecture](architecture.png)
 ## 🚀 Features
 
 ### 🎤 Voice-First Interface
