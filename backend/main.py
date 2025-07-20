@@ -86,7 +86,7 @@ async def upload_csv(session_id: str, file: UploadFile = File(...)):
 app.mount("/reports", StaticFiles(directory="reports"), name="reports")
 
 @app.post("/api/report")
-async def report(request: SummarizeRequest):
+async def report_url(request: SummarizeRequest):
     pdf_name = f"{request.session_id}.pdf"
     pdf_path = f"{REPORTS_FOLDER}/{pdf_name}"
     report_url = f"http://localhost:7860/reports/{pdf_name}"
