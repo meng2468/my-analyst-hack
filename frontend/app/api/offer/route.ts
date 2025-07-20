@@ -30,3 +30,37 @@ export async function POST(request: NextRequest) {
     );
   }
 } 
+
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
+  const encoder = new TextEncoder();
+
+  // Simulate transcript lines as a demonstration (replace with your backend/eventbus)
+  async function* transcriptStream() {
+    let counter = 1;
+    while (counter <= 1000) {
+      yield encoder.encode(`data:Transcript line ${counter}\n\n`);
+      await new Promise(res => setTimeout(res, 1500));
+      counter += 1;
+    }
+  }
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      for await (const chunk of transcriptStream()) {
+        controller.enqueue(chunk);
+      }
+      controller.close();
+    }
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+    }
+  });
+}

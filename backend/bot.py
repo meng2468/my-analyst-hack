@@ -121,21 +121,18 @@ def create_execute_dataframe_code(session_id):
         result_to_upload = None
 
         try:
-            try:
-                compiled = compile(code, "<string>", "eval")
-                value = eval(compiled, {}, safe_locals)
-                result = str(value)
-                if isinstance(value, pd.DataFrame):
-                    result_to_upload = value
-            except SyntaxError:
-                # Snapshot of variables before exec
-                before_vars = set(safe_locals.keys())
-                with contextlib.redirect_stdout(output):
-                    exec(code, {}, safe_locals)
-                result = output.getvalue() or "Code executed, but did not return or print anything."
-                # Snapshot after exec
-                after_vars = set(safe_locals.keys())
-
+            compiled = compile(code, "<string>", "eval")
+            value = eval(compiled, {}, safe_locals)
+            result = str(value)
+            if upload_to_google_docs and isinstance(value, pd.DataFrame):
+                result_to_upload = value
+        except SyntaxError:
+            before_vars = set(safe_locals.keys())
+            with contextlib.redirect_stdout(output):
+                exec(code, {}, safe_locals)
+            result = output.getvalue() or "Code executed, but did not return or print anything."
+            after_vars = set(safe_locals.keys())
+            if upload_to_google_docs:
                 # Find new or modified variables that are DataFrames
                 new_vars = after_vars - before_vars
                 df_candidates = [safe_locals[k] for k in new_vars if isinstance(safe_locals[k], pd.DataFrame)]
@@ -149,8 +146,6 @@ def create_execute_dataframe_code(session_id):
                 if df_candidates:
                     # Pick the last one created/modified
                     result_to_upload = df_candidates[-1]
-        except Exception as e:
-            result = f"Error during execution: {e}"
 
         if upload_to_google_docs and result_to_upload is not None:
             try:

@@ -26,6 +26,9 @@ export default function ConversationView({
   const [userStream, setUserStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
 
+  const [transcript, setTranscript] = useState<string[]>([]);
+  const sseRef = useRef<EventSource | null>(null);
+
   // Auto-connect when step is 1
   useEffect(() => {
     if (step === 1 && !connected) {
@@ -36,7 +39,28 @@ export default function ConversationView({
     return () => {
       disconnect();
     };
-  }, [step]); // Dependency on step instead of empty array
+  }, [step]);
+  useEffect(() => {
+    if (status === 'Connected') {
+      // Create and store EventSource only once per connection
+      sseRef.current = new EventSource('/api/transcript-events');
+      sseRef.current.onmessage = (event) => {
+        setTranscript((prev) => [...prev, event.data]);
+      };
+      sseRef.current.onerror = () => {
+        // Optional: handle errors
+        // setTranscript((prev) => [...prev, "[Transcript connection lost]"]);
+      };
+    }
+    // Cleanup when disconnected or unmounted
+    return () => {
+      if (sseRef.current) {
+        sseRef.current.close();
+        sseRef.current = null;
+      }
+      setTranscript([]);
+    };
+  }, [status === 'Connected']);
 
   const waitForIceGatheringComplete = async (pc: RTCPeerConnection, timeoutMs = 2000) => {
     if (pc.iceGatheringState === 'complete') return;
