@@ -190,7 +190,26 @@ INTRO_MESSAGE = (
     "Hello! I am your data analyst"
 )
 transcript = TranscriptProcessor()
+from pipecat.processors.frame_processor import Frame, FrameDirection
+from pipecat.frames.frames import TranscriptionFrame, TextFrame
+from pipecat.processors.frame_processor import FrameProcessor
+class SendMessageFrame(FrameProcessor):
+    def __init__(self):
+        super().__init__()
 
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        try:
+            await super().process_frame(frame, direction)
+            if isinstance(frame, TranscriptionFrame):
+                await broadcaster.push(f"user: {frame.text}")
+            elif isinstance(frame, TextFrame):
+                await broadcaster.push(f"assistant: {frame.text}")
+            await self.push_frame(frame, direction)
+        except Exception as e:
+            print(f"error {e}")
+
+user_send = SendMessageFrame()
+robot_send = SendMessageFrame()
 async def run_bot(webrtc_connection, session_id=None):
     pipecat_transport = SmallWebRTCTransport(
         webrtc_connection=webrtc_connection,
@@ -236,12 +255,12 @@ async def run_bot(webrtc_connection, session_id=None):
     pipeline = Pipeline([
         pipecat_transport.input(),
         sst,
-        transcript.user(),
+        user_send,
         context_aggregator.user(),
         llm,
+        robot_send,
         tts,
         pipecat_transport.output(),
-        transcript.assistant(),
         context_aggregator.assistant(),
     ])
 
@@ -288,15 +307,15 @@ async def run_bot(webrtc_connection, session_id=None):
         await task.cancel()
 
 
-    @transcript.event_handler("on_transcript_update")
-    async def handle_update(processor, frame):
-        if not frame.messages:
-            return
-        latest = frame.messages[-1]
-        # Now process `latest`, e.g.:
-        line = f"{latest.role}: {latest.content}"
-        print(line)
-        await broadcaster.push(line)
+    #@transcript.event_handler("on_transcript_update")
+    #async def handle_update(processor, frame):
+     #   if not frame.messages:
+     #       return
+     #   latest = frame.messages[-1]
+     #   # Now process `latest`, e.g.:
+     #   line = f"{latest.role}: {latest.content}"
+     #   print(line)
+        
             
     runner = PipelineRunner(handle_sigint=False)
     await runner.run(task)

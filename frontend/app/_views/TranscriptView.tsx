@@ -14,7 +14,7 @@ function parseLinesToMessages(lines: string[]) {
         messages.length > 0 &&
         messages[messages.length - 1].role === role
       ) {
-        messages[messages.length - 1].content += '\n' + content
+        messages[messages.length - 1].content += content
       } else {
         messages.push({ role, content })
       }
@@ -55,13 +55,11 @@ export default function TranscriptView({
     const url = `http://localhost:7860/api/transcript-events${sessionId ? `?session_id=${sessionId}` : ''}`
     const evtSource = new EventSource(url)
     evtSource.onmessage = event => {
-        setLines(prev => {
-          if (prev.length > 0 && prev[prev.length - 1] === event.data) {
-            return prev // ignore duplicate
-          }
-          return [...prev, event.data]
-        })
-      }
+        if (event.data.trim() !== '') {        // ignore empty/whitespace-only lines
+            console.log('Transcript line:', event.data)
+        }
+        setLines(prev => [...prev, event.data])
+    }
     evtSource.onerror = () => {
       evtSource.close()
     }
