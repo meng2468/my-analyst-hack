@@ -95,19 +95,19 @@ export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, s
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center gap-6">
+    <div className="w-full h-full flex flex-col items-center">
       {/* Drag and Drop Area */}
       <div
-        className={`w-full h-full min-h-96 border-2 border-dashed rounded-lg flex bg-black/20 backdrop-blur-sm flex-col items-center justify-center gap-4 transition-colors ${
+        className={`w-full h-[520px] border-2 border-dashed rounded-lg flex bg-white/15 backdrop-blur-sm flex-col items-center justify-center gap-4 transition-colors relative ${
           isUploading ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
         } ${
           isDragOver 
-            ? 'border-blue-400 bg-blue-500/20' 
+            ? 'border-blue-400 bg-blue-500/20 transition-colors duration-300' 
             : uploadStatus === 'success'
-            ? 'border-green-400 bg-green-500/20'
+            ? 'border-green-400 bg-green-500/20 transition-colors duration-300'
             : uploadStatus === 'error'
-            ? 'border-red-400 bg-red-500/20'
-            : 'border-gray-400 bg-black/10 hover:border-gray-300 hover:bg-black/20'
+            ? 'border-red-400 bg-red-500/20 transition-colors duration-300'
+            : 'border-gray-400 bg-white/15 hover:border-gray-300 hover:bg-white/20 transition-colors duration-300'
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -118,65 +118,63 @@ export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, s
           <LoadingSpinnerWithText text="Uploading file..." size="lg" />
         ) : uploadStatus === 'success' ? (
           <div className="text-center">
-            <div className="text-green-400 font-medium">✓ File uploaded successfully!</div>
-            <div className="text-sm text-gray-300 mt-2">{file?.name}</div>
-            <div className="text-xs text-gray-400">{(file?.size || 0 / 1024 / 1024).toFixed(2)} MB</div>
+            <div className="text-[#13FFAA] font-semibold text-2xl mb-3">✓ File uploaded successfully!</div>
+            <div className="text-base text-white/90 font-medium mb-1">{file?.name}</div>
+            <div className="text-sm text-white/70 mb-2">{(file?.size || 0 / 1024 / 1024).toFixed(2)} MB</div>
             {sessionId && (
-              <div className="text-xs text-gray-500 mt-1">Session ID: {sessionId}</div>
+              <div className="text-xs text-white/50 mb-4">Session ID: {sessionId}</div>
             )}
             <Button 
               onClick={(e) => { e.stopPropagation(); resetUpload(); }}
-              variant="outline" 
-              size="sm" 
-              className="mt-3 border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+              className="bg-[#13FFAA] text-black hover:bg-[#0FE099] h-12 text-base font-semibold cursor-pointer px-6"
             >
               Upload Another File
             </Button>
           </div>
         ) : uploadStatus === 'error' ? (
           <div className="text-center">
-            <div className="text-red-400 font-medium">✗ Upload failed</div>
-            <div className="text-sm text-gray-300 mt-2">{file?.name}</div>
-            <div className="text-xs text-red-400 mt-1">{errorMessage}</div>
+            <div className="text-red-400 font-semibold text-2xl mb-3">✗ Upload failed</div>
+            <div className="text-base text-white/90 font-medium mb-1">{file?.name}</div>
+            <div className="text-sm text-red-400 mb-4">{errorMessage}</div>
             <Button 
               onClick={(e) => { e.stopPropagation(); resetUpload(); }}
-              variant="outline" 
-              size="sm" 
-              className="mt-3 border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+              className="bg-white text-gray-900 hover:bg-gray-100 h-12 text-base font-semibold cursor-pointer px-6"
             >
               Try Again
             </Button>
           </div>
         ) : file ? (
           <div className="text-center">
-            <div className="text-blue-400 font-medium">📁 File selected</div>
-            <div className="text-sm text-gray-300 mt-2">{file.name}</div>
-            <div className="text-xs text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</div>
-            <div className="text-xs text-gray-500 mt-2">Click to choose a different file</div>
+            <div className="text-[#13FFAA] font-semibold text-2xl mb-3">📁 File selected</div>
+            <div className="text-base text-white/90 font-medium mb-1">{file.name}</div>
+            <div className="text-sm text-white/70 mb-2">{(file.size / 1024 / 1024).toFixed(2)} MB</div>
+            <div className="text-xs text-white/50">Click to choose a different file</div>
           </div>
         ) : (
           <>
-            <div className="text-gray-400 text-4xl">📁</div>
+            <div className="text-white/60 text-6xl mb-4">📁</div>
             <div className="text-center">
-              <div className="font-medium text-white">
+              <div className="font-semibold text-white text-xl mb-2">
                 {isDragOver ? 'Drop your file here' : 'Drag and drop your dataset here'}
               </div>
-              <div className="text-sm text-gray-400 mt-1">or click to browse files</div>
+              <div className="text-base text-white/70">or click to browse files</div>
             </div>
           </>
         )}
-      </div>
 
-      {/* Upload Button */}
-      {file && !isUploading && uploadStatus === 'idle' && (
-        <Button 
-          onClick={uploadFile}
-          className="w-full max-w-md cursor-pointer bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-          disabled={!file}
-        >
-          Upload File
-        </Button>
-      )}
+        {/* Upload Button - Inside the box */}
+        {file && !isUploading && uploadStatus === 'idle' && (
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-xs">
+            <Button 
+              onClick={(e) => { e.stopPropagation(); uploadFile(); }}
+              className="w-full cursor-pointer bg-[#13FFAA] text-black hover:bg-[#0FE099] h-12 text-base font-semibold"
+              disabled={!file}
+            >
+              Upload File
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Hidden File Input */}
       <input 

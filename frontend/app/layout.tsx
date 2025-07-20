@@ -26,7 +26,7 @@ export default function RootLayout({
           <div className="text-9xl font-semibold text-center text-white mb-8">
           Your Personal Data Expert
           </div>
-          <div className="text-3xl font-light text-center text-white mb-8">
+          <div className="text-3xl font-light text-center text-white mb-32">
             {/* Turn your spreadsheets into smart insights, just by talking. */}
           Upload your CSV, start a conversation, and get a professional data analysis delivered right into your inbox.
           </div>

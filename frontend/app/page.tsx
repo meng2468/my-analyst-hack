@@ -46,12 +46,12 @@ export default function Home() {
   };
 
   return (
-      <div className="w-full max-w-6xl mx-auto h-2/3 rounded-lg flex items-center justify-evenly backdrop-blur-sm">
+      <div className="w-full max-w-8xl mx-auto h-2/3 rounded-lg flex items-center justify-evenly backdrop-blur-sm">
         {currentStep !== 2 && (
           <>
             {currentStep === 1 && (
               <>
-                <div className="rounded-l-xl h-full flex flex-col items-center justify-center p-8">
+                <div className="rounded-l-xl h-full flex flex-col items-center justify-center mr-4">
                   <ConversationView
                     sessionId={sessionId}
                     step={currentStep}
