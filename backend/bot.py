@@ -81,16 +81,17 @@ async def summarize_chat_history(session_id: str, report_url: str):
 
 def enrich_dataset(session_id):
     async def _enrich_dataset(params: FunctionCallParams, classification_prompt:str,
-                             output_col_name: str,
-                             document_title: str,
-                             possible_values: list[str]):
+                              output_col_name: str,
+                              document_title: str,
+                              possible_values: list[str]):
         df = pd.read_csv(f"data/{session_id}.csv")
         future = enrichment.run_enrichment_in_background(
             pd_df=df,
             prompt=classification_prompt,
             col_name=output_col_name,
             possible_values=possible_values,
-            title=document_title
+            title=document_title,
+            session_id=session_id
         )
         await params.result_callback({"result": "Enrichment initiated, and deferred to background task"})
     return _enrich_dataset

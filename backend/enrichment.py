@@ -6,7 +6,8 @@ import os
 from dotenv import load_dotenv
 import time
 import threading
-
+from broadcast import enrichment_broadcaster
+import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 executor = ThreadPoolExecutor(max_workers=1) 
@@ -68,7 +69,8 @@ def enrich_dataset(
     col_name: str,
     possible_values: list[str] = None,
     sheet_name: str = "Sheet1",
-    title: str = "Enriched Dataset"
+    title: str = "Enriched Dataset",
+    session_id: str = None
 ) -> dict:
     """
     Creates a new Google Sheet, and as each row is enriched, appends it immediately.
@@ -107,19 +109,17 @@ def enrich_dataset(
             parameter_schema=schema,
             prompt=prompt,
         )
-        # Keep DataFrame updated
         pd_df.at[idx, col_name] = llm_result[col_name]
-        # Prepare the row (including the new column)
         row_with_col = row.copy()
         row_with_col[col_name] = llm_result[col_name]
-        # Ensure order matches sheet
         ordered_row = [str(row_with_col[col]) for col in upload_df.columns]
         append_rows_to_sheet(
             spreadsheet_id=spreadsheet_id,
             sheet_name=sheet_name,
             rows=[ordered_row]
         )
-        time.sleep(5)
+        log_msg = f"Enriched row {idx+1}/{len(pd_df)}: {context} => {llm_result[col_name]}"
+        asyncio.run(enrichment_broadcaster.push(log_msg, session_id=session_id))
 
     return {
         "dataframe": pd_df,

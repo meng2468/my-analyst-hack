@@ -24,7 +24,7 @@ import os
 
 from fastapi import Request
 from fastapi.responses import StreamingResponse
-from broadcast import broadcaster  # make sure to import
+from broadcast import broadcaster,enrichment_broadcaster
 
 class SummarizeRequest(BaseModel):
     session_id: str
@@ -68,6 +68,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/api/enrichment-events")
+async def enrichment_events(request: Request, session_id: str = None):
+    queue = enrichment_broadcaster.add_listener(session_id)
+    async def event_generator():
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                msg = await queue.get()
+                yield f"data: {msg}\n\n"
+        finally:
+            enrichment_broadcaster.remove_listener(queue)
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.get("/api/transcript-events")
 async def transcript_events(request: Request):
