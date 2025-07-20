@@ -34,14 +34,11 @@ function renderWithLineBreaksFromString(text: string) {
         idx < arr.length - 1 ? [line, <br key={idx} />] : line
     )
 }
-
 function CodeWithResult({ code, data }: { code: string; data: string }) {
     const [open, setOpen] = useState(false)
-    const contentRef = useRef<HTMLDivElement>(null)
   
     return (
       <div className="my-2">
-        {/* Only show card background when open */}
         {!open ? (
           <button
             onClick={() => setOpen(true)}
@@ -60,19 +57,7 @@ function CodeWithResult({ code, data }: { code: string; data: string }) {
               <span>Code & Result</span>
               <span className="ml-auto text-gray-400">▲</span>
             </button>
-            {/* Animated content */}
-            <div
-              ref={contentRef}
-              className="transition-all duration-300 ease-in-out overflow-hidden"
-              style={{
-                maxHeight: open
-                  ? contentRef.current
-                    ? contentRef.current.scrollHeight + 'px'
-                    : '600px'
-                  : '0px',
-                opacity: open ? 1 : 0,
-              }}
-            >
+            <div>
               <div className="bg-gray-900 text-gray-100 p-3 font-mono text-xs border-b border-gray-800">
                 <span className="uppercase text-[0.82em] tracking-wider text-gray-400 font-bold mb-2 block">Code</span>
                 <pre className="overflow-x-auto whitespace-pre-wrap">
