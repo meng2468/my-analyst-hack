@@ -204,8 +204,9 @@ export default function ConversationView({
     if (userStream) {
       const audioTrack = userStream.getAudioTracks()[0];
       if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMuted(!audioTrack.enabled);
+        const newEnabledState = !audioTrack.enabled;
+        audioTrack.enabled = newEnabledState;
+        setIsMuted(!newEnabledState);
       }
     }
   };
@@ -267,11 +268,11 @@ export default function ConversationView({
   );
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-white w-full p-6 relative">
-      <div className="w-full max-w-md h-full flex flex-col space-y-6 items-center justify-center">
+    <div className="flex flex-col items-center justify-center bg-white/15 backdrop-blur-lg border border-white w-full px-12 p-6 rounded-lg relative">
+      <div className="w-full max-w-md h-[470px] flex flex-col space-y-6 items-center justify-center">
         
         {/* Fixed height container for audio visualizer area */}
-        <div className="h-48 flex items-center justify-center">
+        <div className="h-36 flex items-center justify-center">
           {step === 0 ? (
             <ConversationSkeleton />
           ) : status === 'Connecting' ? (
@@ -332,7 +333,6 @@ export default function ConversationView({
                   </>
                 )}
               </Button>
-              
             </div>
           )}
         </div>

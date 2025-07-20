@@ -46,45 +46,45 @@ export default function Home() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto h-2/3 rounded-lg flex items-center justify-evenly p-8">
-      {currentStep !== 2 && (
-        <>
-        {currentStep === 1 && (
+      <div className="w-full max-w-6xl mx-auto h-2/3 rounded-lg flex items-center justify-evenly backdrop-blur-sm">
+        {currentStep !== 2 && (
           <>
-          <div className="rounded-l-xl h-full flex flex-col items-center justify-center p-8">
-            <ConversationView 
-              sessionId={sessionId} 
-              step={currentStep} 
-              setStep={setCurrentStep}
-              onStepChange={(newStep) => {
-                console.log('Step changed to:', newStep);
-                // Connection is already closed in ConversationView
-              }}
-            />
-          </div>
+            {currentStep === 1 && (
+              <>
+                <div className="rounded-l-xl h-full flex flex-col items-center justify-center p-8">
+                  <ConversationView
+                    sessionId={sessionId}
+                    step={currentStep}
+                    setStep={setCurrentStep}
+                    onStepChange={(newStep) => {
+                      console.log('Step changed to:', newStep);
+                      // Connection is already closed in ConversationView
+                    }}
+                  />
+                </div>
+              </>
+            )}
+            <div className="h-full w-full flex flex-col items-center justify-center ">
+              {currentStep === 0 && (
+                <UploadView sessionId={sessionId} setSessionFile={setFile} />
+              )}
+              {currentStep === 1 && (
+                <TranscriptView sessionId={sessionId} setStep={setCurrentStep} />
+              )}
+            </div>
           </>
         )}
-          <div className="h-full w-full flex flex-col items-center justify-center p-8 ">
-            {currentStep === 0 && (
-              <UploadView sessionId={sessionId} setSessionFile={setFile} />
-            )}
-            {currentStep === 1 && (
-              <TranscriptView sessionId={sessionId} setStep={setCurrentStep}/>
-            )}
-          </div>
-        </>
-      )}
 
-      {/* Summary Popup for Step 3 */}
-      {
-        showSummaryPopup && (
-          <SummaryPopup
-            onRestartWithNewDataset={handleRestartWithNewDataset}
-            onContinueWithSameDataset={handleContinueWithSameDataset}
-            sessionId={sessionId}
-          />
-        )
-      }
-    </div>
+        {/* Summary Popup for Step 3 */}
+        {
+          showSummaryPopup && (
+            <SummaryPopup
+              onRestartWithNewDataset={handleRestartWithNewDataset}
+              onContinueWithSameDataset={handleContinueWithSameDataset}
+              sessionId={sessionId}
+            />
+          )
+        }
+      </div>
   );
 }

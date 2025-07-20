@@ -19,7 +19,7 @@ export default function SummarySection({
 }: SummarySectionProps) {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeOption, setActiveOption] = useState<'email' | 'restart' | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +45,7 @@ export default function SummarySection({
       const result = await response.json();
       console.log('Email summary sent successfully:', result);
       setEmail('');
-      setActiveOption(null);
+      setEmailSent(true);
     } catch (error) {
       console.error('Failed to send email summary:', error);
     } finally {
@@ -55,108 +55,98 @@ export default function SummarySection({
 
   const handleRestartWithNewDataset = () => {
     onRestartWithNewDataset();
-    setActiveOption(null);
   };
 
   const handleContinueWithSameDataset = () => {
     onContinueWithSameDataset();
-    setActiveOption(null);
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-lg border max-w-2xl w-full p-6 mx-auto"
-    >
-      {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Summary Complete!</h2>
-        <p className="text-gray-600 mt-2">
-          Your conversation summary has been generated. What would you like to do next?
-        </p>
-      </div>
+    <div className="w-full h-[520px] flex flex-col items-center justify-center border bg-white/15 backdrop-blur-lg border-white rounded-lg relative">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full h-full flex flex-col justify-center p-8"
+      >
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h2 className="text-3xl font-bold text-white mb-3">Summary Complete!</h2>
+          <p className="text-white/80 text-lg">
+            Your conversation summary has been generated. What would you like to do next?
+          </p>
+        </div>
 
-      {/* Content */}
-      <div className="space-y-6">
-        {/* Email Summary Option */}
-        <div className="space-y-3">
-          <Button
-            variant={activeOption === 'email' ? 'default' : 'outline'}
-            className="w-full justify-start h-auto p-4"
-            onClick={() => setActiveOption(activeOption === 'email' ? null : 'email')}
-          >
-            <Mail className="w-5 h-5 mr-3" />
-            <div className="text-left">
-              <div className="font-medium">Email me a summary</div>
-              <div className="text-sm text-gray-500">Get your conversation summary delivered to your inbox</div>
+        {/* Content - Two Column Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1">
+          {/* Left Column - Email Summary */}
+          <div className="space-y-6 flex flex-col justify-center">
+            <div className="flex items-center gap-4 mb-6">
+              <Mail className="w-8 h-8 text-[#13FFAA]" />
+              <h3 className="text-xl font-semibold text-white">Email Summary</h3>
             </div>
-          </Button>
-
-          {activeOption === 'email' && (
-            <motion.form
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              onSubmit={handleEmailSubmit}
-              className="space-y-3 pl-8"
-            >
+            <p className="text-white/70 text-base mb-6">
+              Get your conversation summary delivered to your inbox
+            </p>
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
               <Input
                 type="email"
                 placeholder="Enter your email address"
                 value={email}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 required
-                className="w-full"
+                className="w-full bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-[#13FFAA] focus:ring-[#13FFAA]"
               />
               <Button
                 type="submit"
                 disabled={isSubmitting || !email.trim()}
-                className="w-full"
+                className="w-full bg-[#13FFAA] text-black hover:bg-[#0FE099] h-12 text-base font-medium cursor-pointer"
               >
                 {isSubmitting ? 'Sending...' : 'Generate Summary'}
               </Button>
-            </motion.form>
-          )}
-        </div>
+            </form>
+          </div>
 
-        {/* Restart/Continue Options */}
-        <div className="space-y-3">
-          <Button
-            variant={activeOption === 'restart' ? 'default' : 'outline'}
-            className="w-full justify-start h-auto p-4"
-            onClick={() => setActiveOption(activeOption === 'restart' ? null : 'restart')}
-          >
-            <RefreshCw className="w-5 h-5 mr-3" />
-            <div className="text-left">
-              <div className="font-medium">Restart with another dataset</div>
-              <div className="text-sm text-gray-500">Upload a new dataset and start fresh</div>
+          {/* Right Column - Restart Options */}
+          <div className="space-y-6 flex flex-col justify-center">
+            <div className="flex items-center gap-4 mb-6">
+              <RefreshCw className="w-8 h-8 text-[#13FFAA]" />
+              <h3 className="text-xl font-semibold text-white">Continue Analysis</h3>
             </div>
-          </Button>
-
-          {activeOption === 'restart' && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              className="space-y-3 pl-8"
-            >
+            <p className="text-white/70 text-base mb-6">
+              Upload a new dataset or continue with the same one
+            </p>
+            <div className="space-y-4">
               <Button
                 onClick={handleRestartWithNewDataset}
-                variant="outline"
-                className="w-full"
+                className="w-full bg-white text-gray-900 hover:bg-gray-100 h-12 text-base font-medium cursor-pointer"
               >
                 Upload New Dataset
               </Button>
               <Button
                 onClick={handleContinueWithSameDataset}
-                variant="outline"
-                className="w-full"
+                className="w-full bg-white text-gray-900 hover:bg-gray-100 h-12 text-base font-medium cursor-pointer"
               >
                 Continue with Same Dataset
               </Button>
-            </motion.div>
-          )}
+            </div>
+          </div>
         </div>
-      </div>
-    </motion.div>
+        
+        {/* Confirmation Message */}
+        {emailSent && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 flex justify-center"
+          >
+            <div className="p-4 bg-[#13FFAA]/20 border border-[#13FFAA]/30 rounded-lg max-w-md">
+              <p className="text-[#13FFAA] text-sm font-medium text-center">
+                ✓ Summary sent successfully! Check your email.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+    </div>
   );
 } 

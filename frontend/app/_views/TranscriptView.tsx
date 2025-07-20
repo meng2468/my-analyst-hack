@@ -174,32 +174,20 @@ export default function TranscriptView({
             continue
         }
         // user / assistant bubbles
+        const justifyClass = msg.role === 'user' ? 'justify-end' : msg.role === 'assistant' ? 'justify-start' : 'justify-center';
+        const messageClass = msg.role === 'user'
+            ? 'bg-[#13FFAA] text-black self-end'
+            : msg.role === 'assistant'
+                ? 'bg-white border border-gray-200 text-gray-800'
+                : '';
+
         renderedMessages.push(
-            <div
-                key={i}
-                className={`flex ${msg.role === 'user'
-                        ? 'justify-end'
-                        : msg.role === 'assistant'
-                            ? 'justify-start'
-                            : 'justify-center'
-                    }`}
-            >
-                <div
-                    className={`
-            rounded-lg px-4 py-3 max-w-[75%] whitespace-pre-line
-            text-base shadow-sm
-            ${msg.role === 'user'
-                            ? 'bg-blue-500 text-white self-end'
-                            : msg.role === 'assistant'
-                                ? 'bg-white border border-gray-200 text-gray-800'
-                                : ''
-                        }
-          `}
-                >
+            <div key={i} className={`flex ${justifyClass}`}>
+                <div className={`rounded-lg px-4 py-3 max-w-[75%] whitespace-pre-line text-base shadow-sm ${messageClass}`}>
                     {renderWithLineBreaksFromString(msg.content)}
                 </div>
             </div>
-        )
+        );
     }
 
     const handleDownload = () => {
@@ -217,24 +205,14 @@ export default function TranscriptView({
     const handleGenerateSummary = () => setStep(3)
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-white p-4 rounded-lg relative">
-            <div
-                className="
-          w-full max-w-2xl flex-1
-          bg-gray-50 rounded-lg border border-gray-100 shadow
-          p-6
-          mb-16
-          overflow-y-auto
-          max-h-[430px]
-          transition-all"
-                style={{ minHeight: '220px' }}
-            >
+        <div className="w-full h-[520px] flex flex-col items-center justify-center border bg-white/15 backdrop-blur-lg border-white  rounded-lg relative">
+            <div className="w-full flex-col items-start justify-center overflow-y-auto">
                 {messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full w-full text-gray-400">
                         Waiting for transcript...
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-6 p-4 pr-6">
                         {renderedMessages}
                         <div ref={transcriptEndRef}></div>
                     </div>

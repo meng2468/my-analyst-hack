@@ -95,19 +95,19 @@ export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, s
   };
 
   return (
-    <div className="w-full flex flex-col items-center gap-6">
+    <div className="w-full h-full flex flex-col items-center gap-6">
       {/* Drag and Drop Area */}
       <div
-        className={`w-full max-w-md h-48 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-4 transition-colors ${
+        className={`w-full h-full min-h-96 border-2 border-dashed rounded-lg flex bg-black/20 backdrop-blur-sm flex-col items-center justify-center gap-4 transition-colors ${
           isUploading ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
         } ${
           isDragOver 
-            ? 'border-blue-500 bg-blue-50' 
+            ? 'border-blue-400 bg-blue-500/20' 
             : uploadStatus === 'success'
-            ? 'border-green-500 bg-green-50'
+            ? 'border-green-400 bg-green-500/20'
             : uploadStatus === 'error'
-            ? 'border-red-500 bg-red-50'
-            : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
+            ? 'border-red-400 bg-red-500/20'
+            : 'border-gray-400 bg-black/10 hover:border-gray-300 hover:bg-black/20'
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -118,50 +118,50 @@ export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, s
           <LoadingSpinnerWithText text="Uploading file..." size="lg" />
         ) : uploadStatus === 'success' ? (
           <div className="text-center">
-            <div className="text-green-600 font-medium">✓ File uploaded successfully!</div>
-            <div className="text-sm text-gray-600 mt-2">{file?.name}</div>
-            <div className="text-xs text-gray-500">{(file?.size || 0 / 1024 / 1024).toFixed(2)} MB</div>
+            <div className="text-green-400 font-medium">✓ File uploaded successfully!</div>
+            <div className="text-sm text-gray-300 mt-2">{file?.name}</div>
+            <div className="text-xs text-gray-400">{(file?.size || 0 / 1024 / 1024).toFixed(2)} MB</div>
             {sessionId && (
-              <div className="text-xs text-gray-400 mt-1">Session ID: {sessionId}</div>
+              <div className="text-xs text-gray-500 mt-1">Session ID: {sessionId}</div>
             )}
             <Button 
               onClick={(e) => { e.stopPropagation(); resetUpload(); }}
               variant="outline" 
               size="sm" 
-              className="mt-3"
+              className="mt-3 border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
             >
               Upload Another File
             </Button>
           </div>
         ) : uploadStatus === 'error' ? (
           <div className="text-center">
-            <div className="text-red-600 font-medium">✗ Upload failed</div>
-            <div className="text-sm text-gray-600 mt-2">{file?.name}</div>
-            <div className="text-xs text-red-500 mt-1">{errorMessage}</div>
+            <div className="text-red-400 font-medium">✗ Upload failed</div>
+            <div className="text-sm text-gray-300 mt-2">{file?.name}</div>
+            <div className="text-xs text-red-400 mt-1">{errorMessage}</div>
             <Button 
               onClick={(e) => { e.stopPropagation(); resetUpload(); }}
               variant="outline" 
               size="sm" 
-              className="mt-3"
+              className="mt-3 border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
             >
               Try Again
             </Button>
           </div>
         ) : file ? (
           <div className="text-center">
-            <div className="text-blue-600 font-medium">📁 File selected</div>
-            <div className="text-sm text-gray-600 mt-2">{file.name}</div>
-            <div className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</div>
-            <div className="text-xs text-gray-400 mt-2">Click to choose a different file</div>
+            <div className="text-blue-400 font-medium">📁 File selected</div>
+            <div className="text-sm text-gray-300 mt-2">{file.name}</div>
+            <div className="text-xs text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</div>
+            <div className="text-xs text-gray-500 mt-2">Click to choose a different file</div>
           </div>
         ) : (
           <>
             <div className="text-gray-400 text-4xl">📁</div>
             <div className="text-center">
-              <div className="font-medium text-gray-700">
+              <div className="font-medium text-white">
                 {isDragOver ? 'Drop your file here' : 'Drag and drop your dataset here'}
               </div>
-              <div className="text-sm text-gray-500 mt-1">or click to browse files</div>
+              <div className="text-sm text-gray-400 mt-1">or click to browse files</div>
             </div>
           </>
         )}
@@ -171,9 +171,8 @@ export function FileUpload({ sessionId, setSessionFile }: { sessionId: string, s
       {file && !isUploading && uploadStatus === 'idle' && (
         <Button 
           onClick={uploadFile}
-          className="w-full max-w-md cursor-pointer"
+          className="w-full max-w-md cursor-pointer bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
           disabled={!file}
-          variant="outline"
         >
           Upload File
         </Button>
