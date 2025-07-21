@@ -10,6 +10,7 @@ function parseLinesToMessages(lines: string[]) {
     const messages: { role: MsgRole, content: string }[] = []
     for (const line of lines) {
         // Accept "user:", "assistant:", "data:", "code:", or "image:"
+
         const match = line.match(/^(user|assistant|data|code|image):\s?(.*)$/i)
         if (match) {
             const role = match[1].toLowerCase() as MsgRole
@@ -41,12 +42,15 @@ function CodeWithResult({ code, data }: { code: string; data: string }) {
         <div className="my-2">
             {!open ? (
                 <button
-                    onClick={() => setOpen(true)}
-                    className="flex items-center gap-2 text-gray-700 hover:text-blue-600 text-sm px-2 py-1 transition focus:outline-none"
-                >
-                    <span>Show code & result</span>
-                    <span className="text-gray-400">▼</span>
-                </button>
+                onClick={() => setOpen(true)}
+                className="flex items-center gap-2 
+                           text-gray-700 hover:text-blue-600 font-bold
+                           dark:text-white dark:hover:text-blue-400
+                           text-sm px-2 py-1 transition focus:outline-none"
+            >
+                <span className='text-white'>Show code & result</span>
+                <span className="text-gray-400 dark:text-gray-300">▼</span>
+            </button>
             ) : (
                 <div className="rounded-xl border border-gray-200 shadow overflow-hidden bg-white">
                     <button
@@ -76,19 +80,7 @@ function CodeWithResult({ code, data }: { code: string; data: string }) {
         </div>
     )
 }
-function ImageCard({ base64 }: { base64: string }) {
-    return (
-        <div className="w-full flex justify-center my-2">
-            <div className="border border-gray-200 shadow rounded-lg bg-white p-2">
-                <img
-                    src={`data:image/png;base64,${base64}`}
-                    alt="Result graph"
-                    className="max-h-[300px] max-w-full rounded"
-                />
-            </div>
-        </div>
-    )
-}
+
 
 export default function TranscriptView({
     sessionId,

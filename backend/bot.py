@@ -111,78 +111,145 @@ def enrich_dataset(session_id):
 def create_execute_dataframe_code(session_id):
     async def execute_dataframe_code(params: FunctionCallParams, code: str,
                                      anaylsis_title: str = "", upload_to_google_docs: bool=False):
-        print(f"execute_dataframe_code, session_id: {session_id} with {upload_to_google_docs}, code {code}", flush=True)
-        
-        # Load session-specific dataframe
-        try:
-            df = pd.read_csv(f"data/{session_id}.csv")
-            print(f"Loaded dataset from data/{session_id}.csv", flush=True)
-        except Exception as e:
-            print(f"no data found for session id {session_id} in data folder. error {e}", flush=True)
-            try:
-                df = pd.read_csv(f"{session_id}.csv")
-                print(f"Loaded dataset from {session_id}.csv", flush=True)
-            except Exception as e2:
-                print(f"no data found for session id {session_id} in current directory. error {e2}", flush=True)
-                df = pd.read_csv("airline.csv")
-                print("Using default airline dataset", flush=True)
+        import traceback
 
+        def format_exception(e):
+            return f"{type(e).__name__}: {e}"
+
+        result = ""
+        try:
+            df = None
+            loaded = False
+            try:
+                df = pd.read_csv(f"data/{session_id}.csv")
+                print(f"Loaded dataset from data/{session_id}.csv", flush=True)
+                loaded = True
+            except Exception as e:
+                print(f"no data found for session id {session_id} in data folder. error {e}", flush=True)
+                try:
+                    df = pd.read_csv(f"{session_id}.csv")
+                    print(f"Loaded dataset from {session_id}.csv", flush=True)
+                    loaded = True
+                except Exception as e2:
+                    print(f"no data found for session id {session_id} in current directory. error {e2}", flush=True)
+                    try:
+                        df = pd.read_csv("airline.csv")
+                        print("Using default airline dataset", flush=True)
+                        loaded = True
+                    except Exception as e3:
+                        err_msg = (f"Failed to load any dataset: {format_exception(e3)}")
+                        print(err_msg, flush=True)
+                        result = err_msg
+            if not loaded:
+                await params.result_callback({"result": result})
+                return
+        except Exception as e:
+            err_msg = f"Error loading dataset: {format_exception(e)}"
+            print(err_msg, flush=True)
+            result = err_msg
+            await params.result_callback({"result": result})
+            return
+
+        # Safe dict for local scope
         safe_locals = {"df": df, "pd": pd}
         output = io.StringIO()
         result_to_upload = None
 
+        # Code execution step
         try:
-            compiled = compile(code, "<string>", "eval")
-            value = eval(compiled, {}, safe_locals)
-            result = str(value)
-            if upload_to_google_docs and isinstance(value, pd.DataFrame):
-                result_to_upload = value
+            try:
+                compiled = compile(code, "<string>", "eval")
+                try:
+                    value = eval(compiled, {}, safe_locals)
+                    result = str(value)
+                    if upload_to_google_docs and isinstance(value, pd.DataFrame):
+                        result_to_upload = value
+                except Exception as eval_err:
+                    result = f"Error during evaluation: {format_exception(eval_err)}"
+                    print(result, flush=True)
+            except SyntaxError:
+                before_vars = set(safe_locals.keys())
+                try:
+                    with contextlib.redirect_stdout(output):
+                        exec(code, {}, safe_locals)
+                    result = output.getvalue() or "Code executed, but did not return or print anything."
+                    after_vars = set(safe_locals.keys())
+                    if upload_to_google_docs:
+                        new_vars = after_vars - before_vars
+                        df_candidates = [safe_locals[k] for k in new_vars if isinstance(safe_locals[k], pd.DataFrame)]
+                        if not df_candidates:
+                            df_candidates = [
+                                safe_locals[k] for k in after_vars
+                                if isinstance(safe_locals[k], pd.DataFrame) and 
+                                (k not in before_vars or id(safe_locals[k]) != id(safe_locals.get(k)))
+                            ]
+                        if df_candidates:
+                            result_to_upload = df_candidates[-1]
+                except Exception as exec_err:
+                    tb = traceback.format_exc(limit=3)
+                    result = f"Error during execution: {format_exception(exec_err)}\n{tb}"
+                    print(result, flush=True)
+        except Exception as e:
+            tb = traceback.format_exc(limit=3)
+            # If something really weird happened
+            result = f"Internal error during code compile step: {format_exception(e)}\n{tb}"
+            print(result, flush=True)
 
-        except SyntaxError:
-            before_vars = set(safe_locals.keys())
-            with contextlib.redirect_stdout(output):
-                exec(code, {}, safe_locals)
-            result = output.getvalue() or "Code executed, but did not return or print anything."
-            after_vars = set(safe_locals.keys())
-            if upload_to_google_docs:
-                # Find new or modified variables that are DataFrames
-                new_vars = after_vars - before_vars
-                df_candidates = [safe_locals[k] for k in new_vars if isinstance(safe_locals[k], pd.DataFrame)]
-                if not df_candidates:
-                    # Also include DataFrames whose id changed
-                    df_candidates = [
-                        safe_locals[k] for k in after_vars
-                        if isinstance(safe_locals[k], pd.DataFrame) and 
-                        (k not in before_vars or id(safe_locals[k]) != id(safe_locals.get(k)))
-                    ]
-                if df_candidates:
-                    # Pick the last one created/modified
-                    result_to_upload = df_candidates[-1]
-
+        # Image result step
         image_path = 'analysis.png'
         try:
             if os.path.exists(image_path):
                 with open(image_path, 'rb') as f:
                     image_base64 = base64.b64encode(f.read()).decode('utf-8')
                 os.remove(image_path)
-                await broadcaster.push(f"image: {image_base64}")
-        except:
-            pass
-            
+                try:
+                    await broadcaster.push(f"image: {image_base64}")
+                except Exception as bce:
+                    print(f"Error in broadcaster image push: {format_exception(bce)}", flush=True)
+        except Exception as e:
+            print(f"Error handling image result: {format_exception(e)}", flush=True)
+
+        # Google Sheets upload step (optional)
         if upload_to_google_docs and result_to_upload is not None:
             try:
                 sheets.create_and_upload_df(result_to_upload, anaylsis_title)
                 result += "\n\nDataFrame uploaded to Google Sheets."
             except Exception as upload_err:
-                print("upload_error", upload_err, flush=True)
-                result += f"\n\nFailed to upload to Google Sheets: {upload_err}"
+                msg = f"Failed to upload to Google Sheets: {format_exception(upload_err)}"
+                print("upload_error", msg, flush=True)
+                result += "\n\n" + msg
 
-        print("code", code, flush=True)
-        print("result", result, flush=True)
-        await broadcaster.push(f"code: {code}")
-        await broadcaster.push(f"data: {result}")
-        await params.result_callback({"result": result})
-        add_to_chat_history(session_id, "assistant", result)
+        try:
+            print("code", code, flush=True)
+            print("result", result, flush=True)
+        except Exception:
+            pass
+
+        push_tasks = []
+        try:
+            push_tasks.append(broadcaster.push(f"code: {code}"))
+        except Exception as e:
+            print(f"Error pushing code: {format_exception(e)}", flush=True)
+        try:
+            push_tasks.append(broadcaster.push(f"data: {result}"))
+        except Exception as e:
+            print(f"Error pushing data: {format_exception(e)}", flush=True)
+        # Await them, but don't block the callback if fail
+        for task in push_tasks:
+            try:
+                await task
+            except Exception as e:
+                print(f"Error during broadcaster push: {format_exception(e)}", flush=True)
+
+        try:
+            await params.result_callback({"result": result})
+        except Exception as callback_err:
+            print(f"Error in result_callback: {format_exception(callback_err)}", flush=True)
+
+        try:
+            add_to_chat_history(session_id, "assistant", result)
+        except Exception as hist_err:
+            print(f"Error in add_to_chat_history: {format_exception(hist_err)}", flush=True)
 
     return execute_dataframe_code
 #######################################################
@@ -195,7 +262,7 @@ When the user requests analysis, statistics, summary, or inspection, call `execu
 Always provide Python code as a string in the tool call argument named 'code', describing errors when something went wrong and act accordingly to fix them.
 Your output is directly transferred to text-to-speech, so make a natural, concise and to the point summary to the user question that's easy to understand just by listening to it.
 You can also upload intermediate results to google sheets, if the user chooses to, where a new file is created. For this, your code needs to output a pd df that is passed to google sheets and also updating flag upload_to_google_docs.
-If helpful, you can export ONE image as analysis.png, which you save in py code under current directory and is then streamed automatically to user. You should add matplotlib rendering per default to most code for a good UX with using import matplotlib.pyplot as plt. You do NOT say that you exported or vized it.
+If helpful, you can export ONE image as analysis.png, which you save in py code under current directory and is then streamed automatically to user. You should add matplotlib rendering per default to most code for a good UX with using import matplotlib.pyplot as plt. You do NOT say that you exported or vized it. You can combine multiple subplots here in one plot if needed.
 YOU RESPOND DIRECTLY TO USER QUESTION WITH concise insights in text that is direct and to the point.
 DO NOT FOCUS TOO MUCH ON THE CHART, MAKE THE CODE OUTPUT VALUABLE DATA IN PRINT TO USE THAT DATA, the user cant see the data.
 Explain findings in plain language that non-technical audiences can understand.

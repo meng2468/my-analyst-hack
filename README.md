@@ -4,7 +4,8 @@
 
 yDE (Your Data Expert) is an innovative voice agent platform that transforms data analysis through natural conversation. Upload your datasets and have intelligent conversations with an AI analyst that can understand, analyze, and provide insights through voice interaction.
 
-![yDE Architecture](architecture.png)
+![Screenshot](images/screenshot.png)
+
 ## 🚀 Features
 - Your personal Live Data Voice Agent
 - CSV-Upload (could be any size)
@@ -13,8 +14,10 @@ yDE (Your Data Expert) is an innovative voice agent platform that transforms dat
 - Defer Data Enrichment Task to the background with live updating Google Sheets and streaming to UI/Agent (currently requires ACI_API_KEY to handle auth with Google Sheets)
 
 (if no ACI_API_KEY it still works, by live updating a pd df and saving to disk)
+
 ### Technology Stack
 
+![yDE Architecture](images/architecture.png)
 **Frontend:**
 - Next.js 15.4.2 with React 19
 - TypeScript for type safety

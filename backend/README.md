@@ -24,7 +24,7 @@ pip install -r requirements.txt
 Create a `.env` file in the backend directory:
 
 ```bash
-cp env.example .env
+cp .env.example .env
 ```
 
 Edit the `.env` file and add your API keys:
@@ -32,6 +32,7 @@ Edit the `.env` file and add your API keys:
 ```env
 ELEVENLABS_API_KEY=your_actual_elevenlabs_api_key_here
 OPENAI_API_KEY=your_actual_openai_api_key_here
+ACI_API_KEY=(optional) your-aci-dev-api-key
 ```
 
 ### 3. Get API Keys
