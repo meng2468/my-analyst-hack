@@ -6,48 +6,13 @@ yDE (Your Data Expert) is an innovative voice agent platform that transforms dat
 
 ![yDE Architecture](architecture.png)
 ## 🚀 Features
+- Your personal Live Data Voice Agent
+- CSV-Upload (could be any size)
+- Live Transcript, graph visualization, code and results streaming to frontend
+- Code Execution for insights
+- Defer Data Enrichment Task to the background with live updating Google Sheets and streaming to UI/Agent (currently requires ACI_API_KEY to handle auth with Google Sheets)
 
-### 🎤 Voice-First Interface
-- **Natural Voice Conversations** - Speak directly with your AI data analyst
-- **Real-time Speech Recognition** - Powered by OpenAI's advanced STT
-- **High-Quality Voice Synthesis** - ElevenLabs TTS for natural responses
-- **WebRTC Audio Streaming** - Low-latency, high-quality audio communication
-
-### 📊 Intelligent Data Analysis
-- **Dynamic Dataset Loading** - Upload CSV files and analyze instantly
-- **Pandas Integration** - Full Python data analysis capabilities
-- **Automated Insights** - AI generates meaningful analysis and visualizations
-- **Code Execution** - Run Python code for custom analysis on-the-fly
-
-### 🎯 Smart Features
-- **Session Management** - Persistent conversation history per dataset
-- **Real-time Transcripts** - Live conversation logging
-- **Data Enrichment** - AI-powered dataset classification and enhancement
-- **Google Sheets Integration** - Export results directly to spreadsheets
-- **PDF Report Generation** - Automated report creation with insights
-- **Email Summaries** - Get conversation summaries delivered to your inbox
-
-### 🎨 Modern UI/UX
-- **Responsive Design** - Works on desktop and mobile devices
-- **Real-time Audio Visualization** - Visual feedback during conversations
-- **Animated Backgrounds** - Engaging user experience
-- **Progress Indicators** - Clear status updates throughout the process
-
-## 🏗️ Architecture
-
-yDE is built with a modern, scalable architecture:
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │    Backend      │    │   External      │
-│   (Next.js)     │◄──►│   (FastAPI)     │◄──►│   APIs          │
-│                 │    │                 │    │                 │
-│ • React UI      │    │ • WebRTC        │    │ • OpenAI        │
-│ • Audio Stream  │    │ • AI Pipeline   │    │ • ElevenLabs    │
-│ • File Upload   │    │ • Data Analysis │    │ • Google Sheets │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
+(if no ACI_API_KEY it still works, by just printing it)
 ### Technology Stack
 
 **Frontend:**
@@ -64,6 +29,7 @@ yDE is built with a modern, scalable architecture:
 - Pandas for data manipulation
 - OpenAI GPT-4 for natural language processing
 - ElevenLabs for text-to-speech synthesis
+- aci.dev integration for gmail, google sheets
 
 ## 🛠️ Installation & Setup
 
@@ -75,7 +41,14 @@ yDE is built with a modern, scalable architecture:
 - Modern web browser with WebRTC support
 
 ### Quick Start
+You need the following API-KEYS
 
+```
+ELEVENLABS_API_KEY=
+OPENAI_API_KEY=
+ELEVENLABS_VOICE_ID=
+ACI_API_KEY=
+```
 1. **Clone the repository**
    ```bash
    git clone <repository-url>

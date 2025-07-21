@@ -21,8 +21,6 @@ from pipecat.processors.transcript_processor import TranscriptProcessor
 from broadcast import broadcaster
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.llm_service import FunctionCallParams
-import contextvars
-from contextlib import AsyncExitStack
 from openai import OpenAI
 import sheets
 import enrichment
@@ -60,7 +58,6 @@ async def summarize_chat_history(session_id: str, report_url: str):
         f"Your output should be a E-Mail-Body with greetings and conclusion by greetings your Voice2Insights data chatbot and the main key, concise and valuable insights. It must be a business report keep it professional with key insights like you are a data analyst."
     )
     
-    # Build the LLM context
     messages = [
         {"role": "system", "content": summarization_prompt},
     ]
@@ -81,6 +78,18 @@ async def summarize_chat_history(session_id: str, report_url: str):
 
     return summary
 
+def get_df_column_info(session_id):
+    try:
+        df = pd.read_csv(f"data/{session_id}.csv")
+    except Exception:
+        try:
+            df = pd.read_csv(f"{session_id}.csv")
+        except Exception:
+            df = pd.read_csv("airline.csv")
+    col_info = ", ".join(f"{c} ({str(dt)})" for c, dt in zip(df.columns, df.dtypes))
+    return f"The dataset columns are: {col_info}. The dataset is airline customer satisfaction"
+
+###################### TOOLS ######################
 def enrich_dataset(session_id):
     async def _enrich_dataset(params: FunctionCallParams, classification_prompt:str,
                               output_col_name: str,
@@ -176,33 +185,23 @@ def create_execute_dataframe_code(session_id):
         add_to_chat_history(session_id, "assistant", result)
 
     return execute_dataframe_code
-
-def get_df_column_info(session_id):
-    try:
-        df = pd.read_csv(f"data/{session_id}.csv")
-    except Exception:
-        try:
-            df = pd.read_csv(f"{session_id}.csv")
-        except Exception:
-            df = pd.read_csv("airline.csv")
-    col_info = ", ".join(f"{c} ({str(dt)})" for c, dt in zip(df.columns, df.dtypes))
-    return f"The dataset columns are: {col_info}. The dataset is airline customer satisfaction"
+#######################################################
 
 # --- SYSTEM PROMPT: tell LLM how & when to use it ---
-SYSTEM_PROMPT = (
-    "You are an expert data analyst. That assists business stakeholders in analyzing their data and making decisions."
-    "The user's dataset is loaded dynamically based on their session and is available as the variable `df` (a pandas DataFrame). "
-    "When the user requests analysis, statistics, summary, or inspection, call `execute_dataframe_code with the appropriate Python code to analyze or manipulate `df`. "
-    "Always provide Python code as a string in the tool call argument named 'code', describing errors when something went wrong."
-    "Your output is directly transferred to text-to-speech, so make a natural, concise and to the point summary to the user question that's easy to understand just by listening to it."
-    "You can also upload intermediate results to google sheets, if the user chooses to, where a new file is created. for this, your code needs to output a pd df that is passed to google sheets and also upadting flag upload_to_google_docs"
-    "The user can also ask to enrich (e.g. classify the dataset). for this use enrich_dataset tool. it needs classification_prompt of what to look for and possible_values as list of str like for example to defer stance detecion code execution, if helpful, can export ONE image as analysis.png, which you save in py code under current directory and is then streamed automatically to user."
-    "you should add matplotplib rendering per default to most code for a good UX with using import matplotlib.pyplot as plt. you do NOT say that you exported or vized it."
-    "YOU RESPOND DIRECTLY TO USER QUESTION WITH concise insights in text that is direct and to the point."
-    "DO NOT FOCUS TOO MUCH ON THE CHART, MAKE THE CODE OUTPUT VALUABLE DATA IN PRINT AND USE THAT DATA, pretend as if the user can't see it."
-    "Explain findings in plain language that non-technical audiences can understand."
-    "Start with the key insight or recommendation, then provide supporting evidence."
-)
+SYSTEM_PROMPT = """
+You are an expert data analyst. That assists business stakeholders in analyzing their data and making decisions.
+The user's dataset is loaded dynamically based on their session and is available as the variable `df` (a pandas DataFrame). 
+When the user requests analysis, statistics, summary, or inspection, call `execute_dataframe_code` with the appropriate Python code to analyze or manipulate `df`. 
+Always provide Python code as a string in the tool call argument named 'code', describing errors when something went wrong and act accordingly to fix them.
+Your output is directly transferred to text-to-speech, so make a natural, concise and to the point summary to the user question that's easy to understand just by listening to it.
+You can also upload intermediate results to google sheets, if the user chooses to, where a new file is created. For this, your code needs to output a pd df that is passed to google sheets and also updating flag upload_to_google_docs.
+If helpful, you can export ONE image as analysis.png, which you save in py code under current directory and is then streamed automatically to user. You should add matplotlib rendering per default to most code for a good UX with using import matplotlib.pyplot as plt. You do NOT say that you exported or vized it.
+YOU RESPOND DIRECTLY TO USER QUESTION WITH concise insights in text that is direct and to the point.
+DO NOT FOCUS TOO MUCH ON THE CHART, MAKE THE CODE OUTPUT VALUABLE DATA IN PRINT TO USE THAT DATA, the user cant see the data.
+Explain findings in plain language that non-technical audiences can understand.
+Start with the key insight or recommendation, then provide supporting evidence.
+The user can also ask to enrich (e.g. classify the dataset). For this use enrich_dataset tool. It needs classification_prompt, the instruction on what to look for and possible_values as list of str which are the possible classifcation values, e.g. to defer stance detection code execution. This will automatically generates a google sheet and live updates, which are streamed to the user.
+"""
 
 
 INTRO_MESSAGE = (
