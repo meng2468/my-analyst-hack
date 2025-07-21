@@ -12,7 +12,7 @@ yDE (Your Data Expert) is an innovative voice agent platform that transforms dat
 - Code Execution for insights
 - Defer Data Enrichment Task to the background with live updating Google Sheets and streaming to UI/Agent (currently requires ACI_API_KEY to handle auth with Google Sheets)
 
-(if no ACI_API_KEY it still works, by just printing it)
+(if no ACI_API_KEY it still works, by live updating a pd df and saving to disk)
 ### Technology Stack
 
 **Frontend:**
@@ -41,14 +41,6 @@ yDE (Your Data Expert) is an innovative voice agent platform that transforms dat
 - Modern web browser with WebRTC support
 
 ### Quick Start
-You need the following API-KEYS
-
-```
-ELEVENLABS_API_KEY=
-OPENAI_API_KEY=
-ELEVENLABS_VOICE_ID=
-ACI_API_KEY=
-```
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
@@ -102,7 +94,10 @@ ACI_API_KEY=
    ELEVENLABS_API_KEY=your_elevenlabs_api_key
    OPENAI_API_KEY=your_openai_api_key
    ELEVENLABS_VOICE_ID=your_preferred_voice_id
+   ACI_API_KEY=(optional) your-aci-dev-api-key
    ```
+   (if no ACI_API_KEY it still works, by live updating a pd df and saving to disk)
+
 
 5. **Start the backend server**
    ```bash
