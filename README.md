@@ -86,7 +86,7 @@ yDE (Your Data Expert) is an innovative voice agent platform that transforms dat
 
 4. **Configure environment variables**
    ```bash
-   cp env.example .env
+   cp .env.example .env
    ```
    
    Edit `.env` file with your API keys:
